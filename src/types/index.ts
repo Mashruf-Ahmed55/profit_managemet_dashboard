@@ -6,17 +6,6 @@ export interface User {
   avatar?: string;
 }
 
-export interface Customer {
-  id: string;
-  name: string;
-  email: string;
-  phone?: string;
-  address?: string;
-  createdAt: string;
-  orderCount?: number; // Add this line
-  totalSpent?: number; // Add this line
-}
-
 export interface Product {
   id: string;
   name: string;
@@ -29,12 +18,38 @@ export interface Product {
   createdAt: string;
 }
 
+export interface Product {
+  quantity: number;
+  productName: string;
+  imageUrl: string;
+  productSKU: string;
+  PurchasePrice: string;
+  sellPrice: string;
+  tax: string;
+  shipping: string;
+}
+
+export interface Customer {
+  name: string;
+  address: string;
+}
+
 export interface Order {
   id: string;
+  storeId: string;
+  shipNodeType: string;
+  customerOrderId: string;
+  status:
+    | 'pending'
+    | 'processing'
+    | 'completed'
+    | 'cancelled'
+    | 'Shipped'
+    | 'Delivered';
+  orderDate: string;
   customer: Customer;
-  status: 'pending' | 'processing' | 'completed' | 'cancelled';
+  products: Product[];
   total: number;
-  items: number;
   createdAt: string;
   updatedAt?: string;
 }

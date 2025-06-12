@@ -11,9 +11,7 @@ const generateMockOrders = (page: number, limit = 20): Order[] => {
       id: id.toString().padStart(4, '0'),
       // @ts-ignore
       customer: {
-        id: `customer-${id}`,
         name: `Customer ${id}`,
-        email: `customer${id}@example.com`,
       },
       status: statuses[Math.floor(Math.random() * statuses.length)] as any,
       total: Math.random() * 1000 + 50,
@@ -52,7 +50,6 @@ export const getOrders = async ({
     orders = orders.filter(
       (order) =>
         order.customer.name.toLowerCase().includes(search.toLowerCase()) ||
-        order.customer.email.toLowerCase().includes(search.toLowerCase()) ||
         order.id.includes(search)
     );
   }
