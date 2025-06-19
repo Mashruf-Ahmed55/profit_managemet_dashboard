@@ -1,27 +1,30 @@
-"use client"
+'use client';
 
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { MoreHorizontal, Eye, Edit, Trash, AlertTriangle } from "lucide-react"
-import { Skeleton } from "@/components/ui/skeleton"
-import type { Product } from "@/types"
-import Image from "next/image"
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import type { Product } from '@/types';
+import { AlertTriangle } from 'lucide-react';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '../ui/tooltip';
 
 interface ProductsTableProps {
-  products: Product[]
-  isLoading: boolean
-  isFetchingNextPage: boolean
+  products: Product[];
+  isLoading: boolean;
 }
 
-export function ProductsTable({ products, isLoading, isFetchingNextPage }: ProductsTableProps) {
-  const getStockStatus = (stock: number) => {
-    if (stock === 0) return { label: "Out of Stock", variant: "destructive" as const }
-    if (stock < 10) return { label: "Low Stock", variant: "secondary" as const }
-    return { label: "In Stock", variant: "default" as const }
-  }
-
+export function ProductsTable({ products, isLoading }: ProductsTableProps) {
   if (isLoading) {
     return (
       <div className="rounded-md border">
@@ -68,7 +71,7 @@ export function ProductsTable({ products, isLoading, isFetchingNextPage }: Produ
           </TableBody>
         </Table>
       </div>
-    )
+    );
   }
 
   return (
@@ -77,89 +80,118 @@ export function ProductsTable({ products, isLoading, isFetchingNextPage }: Produ
         <TableHeader>
           <TableRow>
             <TableHead>Product</TableHead>
-            <TableHead>SKU</TableHead>
             <TableHead>Category</TableHead>
+            <TableHead>SKU</TableHead>
+            <TableHead>Wpid / Upc / Gtin</TableHead>
             <TableHead>Stock</TableHead>
-            <TableHead>Price</TableHead>
-            <TableHead className="w-[70px]"></TableHead>
+            <TableHead className='text-left'>On Hand / Available</TableHead>
+            <TableHead>Condition</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {products.map((product) => {
-            const stockStatus = getStockStatus(product.stock)
+            const stock = product.onHand ?? 0;
+            const isLowStock = stock < 10 && stock > 0;
+            const isOutOfStock = stock === 0;
+
+            const stockBadgeVariant = isOutOfStock
+              ? 'destructive'
+              : isLowStock
+              ? 'outline'
+              : 'default';
+
+            const availabilityLabel = product.availability
+              ?.replace(/_/g, ' ')
+              ?.replace(/\b\w/g, (l) => l.toUpperCase());
+
             return (
               <TableRow key={product.id}>
+                <TableCell className="max-w-[250px]">
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="truncate cursor-pointer">
+                          <p className="text-xs text-muted-foreground mb-1">
+                            {product.mart}
+                          </p>
+                          <p className="truncate font-medium">
+                            {product.productName}
+                          </p>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="max-w-xs whitespace-pre-wrap break-words text-sm font-medium">
+                          {product.productName}
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </TableCell>
+
                 <TableCell>
-                  <div className="flex items-center space-x-3">
-                    <div className="h-10 w-10 rounded bg-gray-100 flex items-center justify-center overflow-hidden">
-                      {product.image ? (
-                        <Image
-                          src={product.image || "/placeholder.svg"}
-                          alt={product.name}
-                          width={40}
-                          height={40}
-                          className="object-cover"
-                        />
-                      ) : (
-                        <span className="text-xs text-gray-500">IMG</span>
-                      )}
-                    </div>
-                    <div>
-                      <div className="font-medium">{product.name}</div>
-                      <div className="text-sm text-muted-foreground truncate max-w-[200px]">{product.description}</div>
-                    </div>
+                  <Badge variant="outline">{product.productType}</Badge>
+                </TableCell>
+
+                <TableCell className="font-mono text-sm">
+                  {product.sku}
+                </TableCell>
+
+                <TableCell>
+                  <div className="flex gap-y-1.5 flex-col items-start font-medium">
+                    <p className="text-gray-600 text-xs">
+                      wpid: {product.wpid}
+                    </p>
+                    <p className="text-gray-600 text-xs">Upc: {product.upc}</p>
+                    <p className="text-gray-600 text-xs">
+                      Gtin: {product.gtin}
+                    </p>
                   </div>
                 </TableCell>
-                <TableCell className="font-mono text-sm">{product.sku}</TableCell>
-                <TableCell>
-                  <Badge variant="outline">{product.category}</Badge>
-                </TableCell>
+
                 <TableCell>
                   <div className="flex items-center space-x-2">
-                    <Badge variant={stockStatus.variant}>{stockStatus.label}</Badge>
-                    <span className="text-sm font-medium">{product.stock}</span>
-                    {product.stock < 10 && product.stock > 0 && <AlertTriangle className="h-4 w-4 text-yellow-500" />}
+                    <Badge
+                      variant={
+                        availabilityLabel === 'Out_of_stock'
+                          ? 'destructive'
+                          : 'outline'
+                      }
+                    >
+                      {availabilityLabel || 'Unknown'}
+                    </Badge>
+                    {isLowStock && (
+                      <AlertTriangle className="h-4 w-4 text-yellow-500" />
+                    )}
                   </div>
                 </TableCell>
-                <TableCell className="font-medium">${product.price.toFixed(2)}</TableCell>
+
+                <TableCell className="text-right">
+                  <div className="flex items-center gap-y-1 flex-col">
+                    <p className="text-gray-400 text-xs">
+                      On Hand:{' '}
+                      <span className="text-black font-extrabold">
+                        {product.onHand}
+                      </span>
+                    </p>
+                    <p className="text-gray-400 text-xs">
+                      Available:{' '}
+                      <span className="text-black font-extrabold">
+                        {product.available}
+                      </span>
+                    </p>
+                  </div>
+                </TableCell>
+
                 <TableCell>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem>
-                        <Eye className="mr-2 h-4 w-4" />
-                        View
-                      </DropdownMenuItem>
-                      <DropdownMenuItem>
-                        <Edit className="mr-2 h-4 w-4" />
-                        Edit
-                      </DropdownMenuItem>
-                      <DropdownMenuItem className="text-red-600">
-                        <Trash className="mr-2 h-4 w-4" />
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <Badge variant={stockBadgeVariant}>
+                    {product.condition || 'N/A'}
+                  </Badge>
                 </TableCell>
               </TableRow>
-            )
+            );
           })}
-          {isFetchingNextPage && (
-            <TableRow>
-              <TableCell colSpan={6} className="text-center py-4">
-                <div className="flex items-center justify-center space-x-2">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
-                  <span className="text-sm text-muted-foreground">Loading more products...</span>
-                </div>
-              </TableCell>
-            </TableRow>
-          )}
         </TableBody>
       </Table>
     </div>
-  )
+  );
 }

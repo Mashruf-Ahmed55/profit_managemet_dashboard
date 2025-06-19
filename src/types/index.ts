@@ -8,26 +8,26 @@ export interface User {
 
 export interface Product {
   id: string;
-  name: string;
-  description: string;
-  price: number;
-  stock: number;
-  category: string;
-  image?: string;
+  productName: string;
   sku: string;
-  createdAt: string;
+  productType: string;
+  condition: 'New' | 'Used' | 'Refurbished' | string;
+  availability: 'In_stock' | 'Out_of_stock' | 'Low_stock' | string;
+  available: number;
+  onHand: number;
+  gtin: string;
+  upc: string;
+  wpid: string;
+  lifecycleStatus: 'ACTIVE' | 'INACTIVE' | 'DISCONTINUED' | string;
+  publishedStatus: 'PUBLISHED' | 'UNPUBLISHED' | string;
+  mart: string;
+  createdAt: string; // ISO string format
+  updatedAt: string; // ISO string format
+
+  // Optional fields (if any)
+  image?: string;
 }
 
-export interface Product {
-  quantity: number;
-  productName: string;
-  imageUrl: string;
-  productSKU: string;
-  PurchasePrice: string;
-  sellPrice: string;
-  tax: string;
-  shipping: string;
-}
 
 export interface Customer {
   name: string;
