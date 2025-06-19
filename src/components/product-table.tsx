@@ -12,11 +12,11 @@ import {
 } from '@/components/ui/table';
 import { AlertTriangle, Edit, Eye, Package } from 'lucide-react';
 import { useState } from 'react';
-import { ProductEditModal } from './product-edit-modal';
 import { ProductViewModal } from './product-view-modal';
 
 interface Product {
-  id: number;
+  id: number; // Add this line
+  _id: number;
   mart: string;
   sku: string;
   condition: string;
@@ -117,7 +117,7 @@ export function ProductTable({ products, onProductUpdate }: ProductTableProps) {
               </TableRow>
             ) : (
               products.map((product) => (
-                <TableRow key={product.id} className="hover:bg-gray-50">
+                <TableRow key={product._id} className="hover:bg-gray-50">
                   <TableCell>
                     <div className="flex items-center space-x-1">
                       <Package className="h-4 w-4 text-blue-600" />
@@ -227,14 +227,14 @@ export function ProductTable({ products, onProductUpdate }: ProductTableProps) {
       )}
 
       {/* Edit Modal */}
-      {editProduct && (
+      {/* {editProduct && (
         <ProductEditModal
           product={editProduct}
           isOpen={!!editProduct}
           onClose={() => setEditProduct(null)}
           onSave={handleSave}
         />
-      )}
+      )} */}
     </>
   );
 }

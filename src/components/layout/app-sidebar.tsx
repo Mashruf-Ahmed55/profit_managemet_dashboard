@@ -45,6 +45,11 @@ const navigationItems = [
     icon: Package,
   },
   {
+    title: 'Purchases History',
+    url: '/product-history',
+    icon: Package,
+  },
+  {
     title: 'Users',
     url: '/customers',
     icon: Users,
