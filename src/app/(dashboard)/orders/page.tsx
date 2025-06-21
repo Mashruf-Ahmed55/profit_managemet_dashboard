@@ -1,39 +1,27 @@
 'use client';
 
-import { OrdersFilters } from '@/components/orders/orders-filters';
 import { OrdersTable } from '@/components/orders/orders-table';
 import { Button } from '@/components/ui/button';
-import { getOrders } from '@/lib/api/orders';
-import { useInfiniteQuery } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
+import axios from 'axios';
 import { Plus } from 'lucide-react';
-import { useEffect, useState } from 'react';
-import { useInView } from 'react-intersection-observer';
+
+const getOrders = async () => {
+  try {
+    const response = await axios.get(
+      'http://localhost:4000/api/orders/get-orders'
+    );
+    return response.data.orders;
+  } catch (error) {
+    console.log(error);
+  }
+};
 
 export default function OrdersPage() {
-  const [filters, setFilters] = useState({
-    status: '',
-    search: '',
-    dateRange: '',
+  const { data, isLoading } = useQuery({
+    queryKey: ['orders'],
+    queryFn: () => getOrders(),
   });
-
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
-    useInfiniteQuery({
-      queryKey: ['orders', filters],
-      queryFn: ({ pageParam = 1 }) =>
-        getOrders({ page: pageParam, ...filters }),
-      getNextPageParam: (lastPage) => lastPage.nextPage,
-      initialPageParam: 1,
-    });
-
-  const { ref, inView } = useInView();
-
-  useEffect(() => {
-    if (inView && hasNextPage) {
-      fetchNextPage();
-    }
-  }, [inView, hasNextPage, fetchNextPage]);
-
-  const orders = data?.pages.flatMap((page) => page.orders) ?? [];
 
   return (
     <div className="space-y-6">
@@ -50,22 +38,9 @@ export default function OrdersPage() {
         </Button>
       </div>
 
-      <OrdersFilters filters={filters} onFiltersChange={setFilters} />
+      {/* <OrdersFilters filters={filters} onFiltersChange={setFilters} /> */}
       {/* orders={orders} */}
-      <OrdersTable
-        isLoading={isLoading}
-        isFetchingNextPage={isFetchingNextPage}
-      />
-
-      {hasNextPage && (
-        <div ref={ref} className="flex justify-center py-4">
-          {isFetchingNextPage && (
-            <div className="text-sm text-muted-foreground">
-              Loading more orders...
-            </div>
-          )}
-        </div>
-      )}
+      <OrdersTable orders={data} isLoading={isLoading} />
     </div>
   );
 }
