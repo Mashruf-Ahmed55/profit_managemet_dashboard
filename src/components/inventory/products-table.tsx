@@ -24,6 +24,7 @@ interface ProductsTableProps {
   isLoading: boolean;
 }
 
+
 export function ProductsTable({ products, isLoading }: ProductsTableProps) {
   if (isLoading) {
     return (
@@ -84,7 +85,7 @@ export function ProductsTable({ products, isLoading }: ProductsTableProps) {
             <TableHead>SKU</TableHead>
             <TableHead>Wpid / Upc / Gtin</TableHead>
             <TableHead>Stock</TableHead>
-            <TableHead className='text-left'>On Hand / Available</TableHead>
+            <TableHead className="text-left">On Hand / Available</TableHead>
             <TableHead>Condition</TableHead>
           </TableRow>
         </TableHeader>
