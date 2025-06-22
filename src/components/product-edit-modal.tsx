@@ -13,8 +13,9 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Save, X } from 'lucide-react';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
-
+import { IoMdAddCircleOutline } from 'react-icons/io';
 interface Product {
   supplier: string;
   card: string;
@@ -33,12 +34,8 @@ interface ProductEditModalProps {
   onSave?: (product: Product) => void;
 }
 
-export function ProductEditModal({
-  product,
-  isOpen,
-  onClose,
-  onSave,
-}: ProductEditModalProps) {
+export function ProductEditModal({ product }: ProductEditModalProps) {
+  const [isOpen, setIsOpen] = useState(false);
   const {
     register,
     handleSubmit,
@@ -57,10 +54,12 @@ export function ProductEditModal({
   });
   const onSubmit = (data: any) => console.log(data);
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <form onSubmit={handleSubmit(onSubmit)}>
         <DialogTrigger asChild>
-          <Button variant="outline">Open Dialog</Button>
+          <Button variant="outline" size="icon">
+            <IoMdAddCircleOutline />
+          </Button>
         </DialogTrigger>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -99,26 +98,6 @@ export function ProductEditModal({
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="quantity">Quantity</Label>
-                    <Input
-                      id="quantity"
-                      type="number"
-                      {...register('quantity', {
-                        required: 'Quantity is required',
-                      })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="quantity">Quantity</Label>
-                    <Input
-                      id="quantity"
-                      type="number"
-                      {...register('quantity', {
-                        required: 'Quantity is required',
-                      })}
-                    />
-                  </div>
                   <div className="space-y-2">
                     <Label htmlFor="quantity">Quantity</Label>
                     <Input
@@ -168,7 +147,7 @@ export function ProductEditModal({
           </div>
 
           <DialogFooter className="flex space-x-2">
-            <Button variant="outline" onClick={onClose}>
+            <Button variant="outline" onClick={() => setIsOpen(false)}>
               <X className="h-4 w-4 mr-2" />
               Cancel
             </Button>

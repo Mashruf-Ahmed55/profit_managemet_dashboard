@@ -1,14 +1,6 @@
 'use client';
 
-import {
-  HelpCircle,
-  Home,
-  Package,
-  Settings,
-  ShoppingCart,
-  TrendingUp,
-  Users,
-} from 'lucide-react';
+import { Home, Package, ShoppingCart, TrendingUp, Users } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
@@ -50,22 +42,14 @@ const navigationItems = [
     icon: Package,
   },
   {
+    title: 'Stores',
+    url: '/store',
+    icon: Package,
+  },
+  {
     title: 'Users',
-    url: '/customers',
+    url: '/users',
     icon: Users,
-  },
-];
-
-const secondaryItems = [
-  {
-    title: 'Settings',
-    url: '/settings',
-    icon: Settings,
-  },
-  {
-    title: 'Help',
-    url: '/help',
-    icon: HelpCircle,
   },
 ];
 
@@ -106,35 +90,6 @@ export function AppSidebar() {
                       'w-full justify-start gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
                       pathname === item.url
                         ? 'bg-gray-950 text-primary-foreground dark:bg-gray-950 dark:text-white'
-                        : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-gray-100'
-                    )}
-                  >
-                    <Link href={item.url}>
-                      <item.icon className="h-4 w-4" />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        <SidebarGroup className="mt-8">
-          <SidebarGroupLabel className="px-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-            Support
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {secondaryItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={pathname === item.url}
-                    className={cn(
-                      'w-full justify-start gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                      pathname === item.url
-                        ? 'bg-primary text-primary-foreground'
                         : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-gray-100'
                     )}
                   >
