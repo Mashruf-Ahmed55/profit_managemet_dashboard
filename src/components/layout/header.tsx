@@ -13,7 +13,8 @@ import {
 import { Input } from '@/components/ui/input';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import type { RootState } from '@/store';
-import { Bell, Search, Settings, User } from 'lucide-react';
+import { Bell, Search, User } from 'lucide-react';
+import Link from 'next/link';
 import { useSelector } from 'react-redux';
 import ToggleTheme from './toggle-theme';
 
@@ -79,12 +80,10 @@ export function Header() {
             </DropdownMenuLabel>
             <DropdownMenuSeparator className="dark:bg-gray-700" />
             <DropdownMenuItem className="dark:hover:bg-gray-700 dark:text-gray-200">
-              <User className="mr-2 h-4 w-4 dark:text-gray-300" />
-              Profile
-            </DropdownMenuItem>
-            <DropdownMenuItem className="dark:hover:bg-gray-700 dark:text-gray-200">
-              <Settings className="mr-2 h-4 w-4 dark:text-gray-300" />
-              Settings
+              <Link href={'/profile'} className="flex items-center">
+                <User className="mr-2 h-4 w-4 dark:text-gray-300" />
+                Profile
+              </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator className="dark:bg-gray-700" />
             <DropdownMenuItem className="text-red-600 dark:text-red-400 dark:hover:bg-gray-700">
