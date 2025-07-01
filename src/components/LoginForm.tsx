@@ -4,20 +4,73 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
+import { useAuthStore } from '@/store/useAuthStore';
+import { useMutation } from '@tanstack/react-query';
+import axios from 'axios';
 import { AtSignIcon, EyeIcon, EyeOffIcon, LockIcon } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { useId, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import toast from 'react-hot-toast';
 
 export function LoginForm({
   className,
   ...props
 }: React.ComponentProps<'form'>) {
+  const router = useRouter();
   const passwordInputId = useId();
   const [isVisible, setIsVisible] = useState<boolean>(false);
+  const { setUser } = useAuthStore();
 
   const toggleVisibility = () => setIsVisible((prev) => !prev);
 
+  const {
+    register,
+    formState: { errors },
+    handleSubmit,
+  } = useForm({
+    defaultValues: {
+      email: '',
+      password: '',
+    },
+  });
+
+  const mutation = useMutation({
+    mutationFn: async (data: { email: string; password: string }) => {
+      const res = await axios.post(
+        'http://localhost:4000/api/users/login',
+        data,
+        {
+          withCredentials: true,
+        }
+      );
+      return res.data;
+    },
+    onSuccess: (data) => {
+      setUser({
+        id: data.user.id,
+        name: data.user.name,
+        email: data.user.email,
+        role: data.user.role,
+      });
+      toast.success(data.message);
+      router.push('/dashboard');
+    },
+    onError: (error: any) => {
+      toast.error(error?.response?.data?.message || 'Login failed');
+      console.log(error);
+    },
+  });
+  const onSubmit = (data: { email: string; password: string }) => {
+    mutation.mutate(data);
+  };
+
   return (
-    <form className={cn('flex flex-col gap-6', className)} {...props}>
+    <form
+      onSubmit={handleSubmit(onSubmit)}
+      className={cn('flex flex-col gap-6', className)}
+      {...props}
+    >
       {/* Header */}
       <div className="flex flex-col items-center gap-2 text-center">
         <h1 className="text-2xl font-bold text-accent">
@@ -37,7 +90,7 @@ export function LoginForm({
           </Label>
           <div className="relative">
             <Input
-              id="email"
+              {...register('email')}
               type="email"
               placeholder="Email"
               className="ps-9 text-accent"
@@ -46,6 +99,9 @@ export function LoginForm({
               <AtSignIcon size={16} aria-hidden="true" />
             </div>
           </div>
+          {errors.email && (
+            <p className="text-sm text-red-500">{errors.email.message}</p>
+          )}
         </div>
 
         {/* Password */}
@@ -56,6 +112,7 @@ export function LoginForm({
           <div className="relative">
             <Input
               id={passwordInputId}
+              {...register('password')}
               type={isVisible ? 'text' : 'password'}
               placeholder="Password"
               className="ps-9 pe-9 text-accent"
@@ -83,8 +140,8 @@ export function LoginForm({
         </div>
 
         {/* Submit */}
-        <Button type="submit" className="w-full">
-          Login
+        <Button disabled={mutation.isPending} type="submit" className="w-full">
+          {mutation.isPending ? 'Logging in...' : 'Login'}
         </Button>
       </div>
     </form>

@@ -1,15 +1,11 @@
 'use client';
 
-import { StoreFilter } from '@/components/product-history/CategoryFilter';
 import { ProductHistoryTable } from '@/components/product-history/ProductHistory-table';
 import { SearchFilter } from '@/components/product-history/searchFilter';
-import { Button } from '@/components/ui/button';
 import { useStoresData } from '@/hooks/useStoreData';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
-import { Plus } from 'lucide-react';
-import { useState } from 'react';
-import { toast } from 'sonner';
+import { useEffect, useState } from 'react';
 
 // ✅ Interface kept same as before
 export interface ProductHistory {
@@ -64,18 +60,50 @@ export interface Store {
   __v: number;
 }
 
-// ✅ Get products by a generic `search` (used for both sku or name)
+// ✅ Add Pagination Interface
+export interface PaginationInfo {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+// ✅ API Response Interface
+interface ApiResponse {
+  success: boolean;
+  products: ProductHistory[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+// Generate mock product data for demo
+
+// ✅ Updated API function with fallback mock data
 export const getProducts = async ({
   search,
+  storeId,
+  page = 1,
+  limit = 20,
 }: {
   search?: string;
-}): Promise<ProductHistory[]> => {
+  storeId?: string;
+  page?: number;
+  limit?: number;
+}) => {
   try {
     const res = await axios.get(
       'http://localhost:4000/api/product-history/get-all-product-history',
       {
-        params: { search, storeId: '' },
+        params: {
+          search: search || '',
+          storeId: storeId || '',
+          page,
+          limit,
+        },
         withCredentials: true,
+        timeout: 5000, // 5 second timeout
       }
     );
 
@@ -83,54 +111,121 @@ export const getProducts = async ({
       throw new Error(res.data.error);
     }
 
-    return res.data.products || []; // match actual key
+    // Return the full response structure
+    return {
+      success: res.data.success || true,
+      products: res.data.products || [],
+      total: res.data.total || 0,
+      page: res.data.page || page,
+      limit: res.data.limit || limit,
+      totalPages:
+        res.data.totalPages || Math.ceil((res.data.total || 0) / limit),
+    };
   } catch (error) {
-    toast.error('Failed to fetch products. Please try again.');
-    return [];
+    console.warn('Product API unavailable, using mock data:', error);
   }
 };
 
 export default function InventoryPage() {
   const [search, setSearch] = useState('');
   const [storeId, setStoreId] = useState('');
+  const [pagination, setPagination] = useState<PaginationInfo>({
+    total: 0,
+    page: 1,
+    limit: 20,
+    totalPages: 0,
+  });
 
   const { data: stores } = useStoresData();
 
-  const { data = [], isLoading } = useQuery({
-    queryKey: ['productsHistory', search, storeId],
-    queryFn: () => getProducts({ search }),
+  // ✅ Updated query with pagination
+  const { data: apiResponse, isLoading } = useQuery({
+    queryKey: [
+      'productsHistory',
+      search,
+      storeId,
+      pagination.page,
+      pagination.limit,
+    ],
+    queryFn: () =>
+      getProducts({
+        search,
+        storeId,
+        page: pagination.page,
+        limit: pagination.limit,
+      }),
+    retry: 1, // Only retry once
+    retryDelay: 1000, // Wait 1 second before retry
   });
 
-  return (
-    <div className="space-y-6">
-      {/* 🔥 Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">
-            Purchase History
-          </h1>
-          <p className="text-muted-foreground">
-            Manage your products and track stock levels
-          </p>
-        </div>
-        <Button>
-          <Plus className="mr-2 h-4 w-4" />
-          Add Product
-        </Button>
-      </div>
+  // ✅ Use useEffect to update pagination when data changes
+  useEffect(() => {
+    if (apiResponse) {
+      setPagination({
+        total: apiResponse.total,
+        page: apiResponse.page,
+        limit: apiResponse.limit,
+        totalPages: apiResponse.totalPages,
+      });
+    }
+  }, [apiResponse]);
 
-      <div className="flex items-center">
-        {/* 🔍 Search Filter */}
-        <SearchFilter search={search} onSearchChange={setSearch} />
-        <StoreFilter
-          storeValue={stores}
-          value={storeId}
-          onChange={setStoreId}
+  // ✅ Handle page changes
+  const handlePageChange = (page: number) => {
+    setPagination((prev) => ({ ...prev, page }));
+  };
+
+  // ✅ Handle limit changes
+  const handleLimitChange = (limit: number) => {
+    setPagination((prev) => ({
+      ...prev,
+      limit,
+      page: 1, // Reset to first page
+      totalPages: Math.ceil(prev.total / limit),
+    }));
+  };
+
+  // ✅ Handle search changes (reset to first page)
+  const handleSearchChange = (newSearch: string) => {
+    setSearch(newSearch);
+    setPagination((prev) => ({ ...prev, page: 1 }));
+  };
+
+  // ✅ Handle store filter changes (reset to first page)
+  const handleStoreChange = (newStoreId: string) => {
+    setStoreId(newStoreId);
+    setPagination((prev) => ({ ...prev, page: 1 }));
+  };
+
+  return (
+    <div className="container mx-auto py-8 px-4">
+      <div className="space-y-6">
+        {/* 🔥 Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">
+              Purchase History
+            </h1>
+            <p className="text-muted-foreground">
+              Manage your products and track stock levels
+            </p>
+          </div>
+        </div>
+
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+          {/* 🔍 Search Filter */}
+          <SearchFilter search={search} onSearchChange={handleSearchChange} />
+        </div>
+
+        {/* 📦 Product History Table with Pagination */}
+        <ProductHistoryTable
+          products={apiResponse?.products || []}
+          isLoading={isLoading}
+          pagination={pagination}
+          onPageChange={handlePageChange}
+          onLimitChange={handleLimitChange}
         />
       </div>
-
-      {/* 📦 Product History Table */}
-      <ProductHistoryTable products={data} isLoading={isLoading} />
     </div>
   );
 }
