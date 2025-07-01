@@ -31,7 +31,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
+import axios from 'axios';
 import {
   AlertCircle,
   ArrowLeft,
@@ -43,26 +43,24 @@ import {
   EyeOff,
   Key,
   Mail,
-  MapPin,
   Phone,
   Save,
   Shield,
   Upload,
   User,
-  Users,
   X,
 } from 'lucide-react';
 import { useState } from 'react';
 
 interface UserData {
-  id: string;
+  _id: string;
   name: string;
   email: string;
   username: string;
   phone: string;
   address: string;
-  role: 'admin' | 'manager' | 'user' | 'viewer';
-  status: 'active' | 'inactive' | 'pending';
+  role: 'admin' | 'manager' | 'user';
+  status: 'active' | 'inactive';
   profileImage: string;
   createdAt: string;
   lastLogin?: string;
@@ -79,31 +77,35 @@ interface EditUserPageProps {
 }
 
 export default function UserPageEdit({
-  user = {
-    id: '1',
-    name: 'John Doe',
-    email: 'john@example.com',
-    username: 'johndoe',
-    phone: '0123456789',
-    address: '123 Main Street, New York, NY 10001',
-    role: 'admin',
-    status: 'active',
-    profileImage:
-      'https://res.cloudinary.com/daaj6x4h2/image/upload/v1747548763/user_profile_images/qrdtjlanshpmyphpaacy.webp',
-    createdAt: '2024-01-15',
-    lastLogin: '2024-01-22',
-  },
+  user,
   onBack,
   onUserUpdated,
 }: EditUserPageProps) {
-  const [formData, setFormData] = useState<UserData>(user);
+  const [formData, setFormData] = useState<UserData>(
+    user || {
+      _id: '',
+      name: '',
+      email: '',
+      username: '',
+      phone: '',
+      address: '',
+      role: 'user',
+      status: 'active',
+      profileImage: '',
+      createdAt: '',
+      lastLogin: '',
+    }
+  );
   const [errors, setErrors] = useState<FormErrors>({});
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string>(user.profileImage);
+  const [imagePreview, setImagePreview] = useState<string>(
+    user?.profileImage || ''
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<
     'idle' | 'success' | 'error'
   >('idle');
+
+  console.log(user?._id);
 
   // Password change state
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
@@ -136,12 +138,6 @@ export default function UserPageEdit({
       label: 'User',
       color: 'bg-green-100 text-green-800',
       icon: User,
-    },
-    {
-      value: 'viewer',
-      label: 'Viewer',
-      color: 'bg-gray-100 text-gray-800',
-      icon: Users,
     },
   ];
 
@@ -224,8 +220,6 @@ export default function UserPageEdit({
         }));
         return;
       }
-
-      setImageFile(file);
       const reader = new FileReader();
       reader.onload = (e) => {
         const result = e.target?.result as string;
@@ -277,29 +271,40 @@ export default function UserPageEdit({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!validateForm()) {
-      return;
-    }
+    if (!validateForm()) return;
 
     setIsSubmitting(true);
     setSubmitStatus('idle');
 
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      const form = new FormData();
+      form.append('name', formData.name);
+      form.append('email', formData.email);
+      form.append('username', formData.username);
+      form.append('phone', formData.phone);
+      form.append('address', formData.address);
+      form.append('role', formData.role);
+      form.append('status', formData.status);
 
-      // Here you would typically send the data to your API
-      console.log('Updated user data:', formData);
+      if (
+        formData.profileImage &&
+        formData.profileImage.startsWith('data:image')
+      ) {
+        const blob = await fetch(formData.profileImage).then((res) =>
+          res.blob()
+        );
+        form.append('profileImage', blob, 'profile.jpg');
+      }
 
+      const res = await axios.put(
+        `http://localhost:4000/api/users/update-user/${user?._id}`,
+        form,
+        { headers: { 'Content-Type': 'multipart/form-data' } }
+      );
+
+      onUserUpdated(res.data.updatedUser);
       setSubmitStatus('success');
-
-      // Call the callback to update the parent component
-      onUserUpdated(formData);
-
-      // Navigate back after a short delay
-      setTimeout(() => {
-        onBack();
-      }, 1500);
+      setTimeout(() => onBack(), 1500);
     } catch (error) {
       console.error('Error updating user:', error);
       setSubmitStatus('error');
@@ -326,8 +331,6 @@ export default function UserPageEdit({
         return 'bg-green-100 text-green-800';
       case 'inactive':
         return 'bg-red-100 text-red-800';
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
@@ -345,7 +348,7 @@ export default function UserPageEdit({
             Back to Users
           </Button>
           <div className="flex items-center mb-4">
-            <User className="h-8 w-8 text-blue-600 mr-3" />
+            <User className="h-8 w-8 text-prim mr-3" />
             <div>
               <h1 className="text-3xl font-bold text-gray-900">Edit User</h1>
               <p className="text-gray-600">
@@ -619,7 +622,7 @@ export default function UserPageEdit({
                   <div className="bg-gray-50 p-3 rounded-md space-y-2">
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">User ID:</span>
-                      <span className="font-mono">{formData.id}</span>
+                      <span className="font-mono">{formData._id}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">Created:</span>
@@ -640,38 +643,6 @@ export default function UserPageEdit({
               </CardContent>
             </Card>
           </div>
-
-          {/* Address Section */}
-          <Card className="mt-6">
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <MapPin className="h-5 w-5 mr-2" />
-                Address Information
-              </CardTitle>
-              <CardDescription>
-                User's location and contact details
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <Label htmlFor="address">
-                  Address <span className="text-red-500">*</span>
-                </Label>
-                <Textarea
-                  id="address"
-                  value={formData.address}
-                  onChange={(e) => handleInputChange('address', e.target.value)}
-                  placeholder="Enter full address"
-                  className={errors.address ? 'border-red-500' : ''}
-                  rows={3}
-                />
-                {errors.address && (
-                  <p className="text-sm text-red-600">{errors.address}</p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
           {/* Security Section */}
           <Card className="mt-6">
             <CardHeader>
@@ -836,11 +807,7 @@ export default function UserPageEdit({
               <X className="h-4 w-4 mr-2" />
               Cancel
             </Button>
-            <Button
-              type="submit"
-              disabled={isSubmitting}
-              className="bg-blue-600 hover:bg-blue-700"
-            >
+            <Button type="submit" disabled={isSubmitting}>
               {isSubmitting ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>

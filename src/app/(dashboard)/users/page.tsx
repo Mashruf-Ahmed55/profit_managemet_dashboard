@@ -46,12 +46,12 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import axios from 'axios';
 import {
   CheckCircle,
-  Clock,
   Crown,
   Edit,
-  Filter,
   Mail,
   MoreHorizontal,
   Phone,
@@ -66,135 +66,86 @@ import {
   XCircle,
 } from 'lucide-react';
 import { useState } from 'react';
+import toast from 'react-hot-toast';
 
 interface UserData {
-  id: string;
+  _id: string;
   name: string;
   email: string;
   username: string;
   phone: string;
   address: string;
-  role: 'admin' | 'manager' | 'user' | 'viewer';
-  status: 'active' | 'inactive' | 'pending';
+  role: 'admin' | 'manager' | 'user';
+  status: 'active' | 'inactive';
   profileImage: string;
   createdAt: string;
   lastLogin?: string;
 }
 
 export default function UsersListPage() {
-  const [users, setUsers] = useState<UserData[]>([
-    {
-      id: '1',
-      name: 'John Doe',
-      email: 'john@example.com',
-      username: 'johndoe',
-      phone: '0123456789',
-      address: '123 Main Street, New York, NY 10001',
-      role: 'admin',
-      status: 'active',
-      profileImage:
-        'https://res.cloudinary.com/daaj6x4h2/image/upload/v1747548763/user_profile_images/qrdtjlanshpmyphpaacy.webp',
-      createdAt: '2024-01-15',
-      lastLogin: '2024-01-22',
-    },
-    {
-      id: '2',
-      name: 'Sarah Wilson',
-      email: 'sarah@techcorp.com',
-      username: 'sarahw',
-      phone: '0123456790',
-      address: '456 Tech Avenue, San Francisco, CA 94105',
-      role: 'manager',
-      status: 'active',
-      profileImage: '',
-      createdAt: '2024-01-18',
-      lastLogin: '2024-01-21',
-    },
-    {
-      id: '3',
-      name: 'Mike Johnson',
-      email: 'mike@company.com',
-      username: 'mikej',
-      phone: '0123456791',
-      address: '789 Business Blvd, Chicago, IL 60601',
-      role: 'user',
-      status: 'pending',
-      profileImage: '',
-      createdAt: '2024-01-20',
-    },
-    {
-      id: '4',
-      name: 'Emily Davis',
-      email: 'emily@startup.io',
-      username: 'emilyd',
-      phone: '0123456792',
-      address: '321 Innovation Drive, Austin, TX 73301',
-      role: 'viewer',
-      status: 'inactive',
-      profileImage: '',
-      createdAt: '2024-01-12',
-      lastLogin: '2024-01-19',
-    },
-    {
-      id: '5',
-      name: 'Alex Chen',
-      email: 'alex@design.co',
-      username: 'alexc',
-      phone: '0123456793',
-      address: '654 Creative Street, Los Angeles, CA 90210',
-      role: 'user',
-      status: 'active',
-      profileImage: '',
-      createdAt: '2024-01-16',
-      lastLogin: '2024-01-22',
-    },
-  ]);
+  const queryClient = useQueryClient();
 
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [roleFilter, setRoleFilter] = useState<string>('all');
-  const [deleteUser, setDeleteUser] = useState<UserData | null>(null);
-  const [currentPage, setCurrentPage] = useState('list'); // list, add, edit
-  const [editingUser, setEditingUser] = useState<UserData | null>(null);
-
-  const filteredUsers = users.filter((user) => {
-    const matchesSearch =
-      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.username.toLowerCase().includes(searchTerm.toLowerCase());
-
-    const matchesStatus =
-      statusFilter === 'all' || user.status === statusFilter;
-    const matchesRole = roleFilter === 'all' || user.role === roleFilter;
-
-    return matchesSearch && matchesStatus && matchesRole;
+  const {
+    data: users = [],
+    isLoading,
+    isError,
+  } = useQuery({
+    queryKey: ['users'],
+    queryFn: async (): Promise<UserData[]> => {
+      const response = await axios.get(
+        'http://localhost:4000/api/users/all-user'
+      );
+      return response.data.users;
+    },
   });
+
+  const [deleteUser, setDeleteUser] = useState<UserData | null>(null);
+  const [currentPage, setCurrentPage] = useState<'list' | 'add' | 'edit'>(
+    'list'
+  );
+  const [editingUser, setEditingUser] = useState<UserData | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<
+    'all' | 'active' | 'inactive'
+  >('all');
+  const [roleFilter, setRoleFilter] = useState<
+    'all' | 'admin' | 'manager' | 'user'
+  >('all');
+
+  const confirmDelete = async () => {
+    if (!deleteUser) return;
+    try {
+      await axios.delete(`http://localhost:4000/api/users/${deleteUser._id}`);
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      setDeleteUser(null);
+      toast.success('User deleted successfully');
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      toast.error('Failed to delete user. Please try again.');
+    }
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'active':
-        return 'bg-green-100 text-green-800';
+        return 'bg-green-100 text-green-800 hover:bg-green-200';
       case 'inactive':
-        return 'bg-red-100 text-red-800';
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800';
+        return 'bg-red-100 text-red-800 hover:bg-red-200';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-gray-100 text-gray-800 hover:bg-gray-200';
     }
   };
 
   const getRoleColor = (role: string) => {
     switch (role) {
       case 'admin':
-        return 'bg-purple-100 text-purple-800';
+        return 'bg-purple-100 text-purple-800 hover:bg-purple-200';
       case 'manager':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-blue-100 text-blue-800 hover:bg-blue-200';
       case 'user':
-        return 'bg-green-100 text-green-800';
-      case 'viewer':
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-green-100 text-green-800 hover:bg-green-200';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-gray-100 text-gray-800 hover:bg-gray-200';
     }
   };
 
@@ -204,8 +155,6 @@ export default function UsersListPage() {
         return <CheckCircle className="h-4 w-4" />;
       case 'inactive':
         return <XCircle className="h-4 w-4" />;
-      case 'pending':
-        return <Clock className="h-4 w-4" />;
       default:
         return null;
     }
@@ -219,21 +168,8 @@ export default function UsersListPage() {
         return <Shield className="h-4 w-4" />;
       case 'user':
         return <User className="h-4 w-4" />;
-      case 'viewer':
-        return <Users className="h-4 w-4" />;
       default:
         return <User className="h-4 w-4" />;
-    }
-  };
-
-  const handleDeleteUser = (user: UserData) => {
-    setDeleteUser(user);
-  };
-
-  const confirmDelete = () => {
-    if (deleteUser) {
-      setUsers(users.filter((user) => user.id !== deleteUser.id));
-      setDeleteUser(null);
     }
   };
 
@@ -245,6 +181,10 @@ export default function UsersListPage() {
   const handleAddUser = () => {
     setEditingUser(null);
     setCurrentPage('add');
+  };
+
+  const handleDeleteUser = (user: UserData) => {
+    setDeleteUser(user);
   };
 
   const getInitials = (name: string) => {
@@ -259,7 +199,6 @@ export default function UsersListPage() {
     return {
       total: users.length,
       active: users.filter((u) => u.status === 'active').length,
-      pending: users.filter((u) => u.status === 'pending').length,
       inactive: users.filter((u) => u.status === 'inactive').length,
       admins: users.filter((u) => u.role === 'admin').length,
     };
@@ -267,39 +206,68 @@ export default function UsersListPage() {
 
   const stats = getUserStats();
 
-  if (currentPage === 'add') {
+  // Filtering logic
+  const filteredUsers = users.filter((user) => {
+    const matchesSearch =
+      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.username.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus =
+      statusFilter === 'all' || user.status === statusFilter;
+    const matchesRole = roleFilter === 'all' || user.role === roleFilter;
+    return matchesSearch && matchesStatus && matchesRole;
+  });
+
+  const copyToClipboard = async (text: string, label: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success(`${label} copied to clipboard`);
+    } catch (error) {
+      toast.error('Failed to copy to clipboard. Please try again.');
+    }
+  };
+
+  if (isLoading) {
     return (
-      <AddUserPage
-        onBack={() => setCurrentPage('list')}
-        onUserAdded={(user) => {
-          setUsers([
-            ...users,
-            {
-              ...user,
-              id: Date.now().toString(),
-              createdAt: new Date().toISOString().split('T')[0],
-            },
-          ]);
-          setCurrentPage('list');
-        }}
-      />
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading users...</p>
+        </div>
+      </div>
     );
+  }
+
+  if (isError) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <XCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">
+            Error Loading Users
+          </h2>
+          <p className="text-gray-600 mb-4">
+            There was a problem loading the user data.
+          </p>
+          <Button
+            onClick={() =>
+              queryClient.invalidateQueries({ queryKey: ['users'] })
+            }
+          >
+            Try Again
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (currentPage === 'add') {
+    return <AddUserPage onBack={() => setCurrentPage('list')} />;
   }
 
   if (currentPage === 'edit' && editingUser) {
     return (
-      <EditUserPage
-        user={editingUser}
-        onBack={() => setCurrentPage('list')}
-        onUserUpdated={(updatedUser) => {
-          setUsers(
-            users.map((user) =>
-              user.id === updatedUser.id ? updatedUser : user
-            )
-          );
-          setCurrentPage('list');
-        }}
-      />
+      <EditUserPage user={editingUser} onBack={() => setCurrentPage('list')} />
     );
   }
 
@@ -308,7 +276,7 @@ export default function UsersListPage() {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-6">
             <div className="flex items-center">
               <Users className="h-8 w-8 text-blue-600 mr-3" />
               <div>
@@ -330,8 +298,8 @@ export default function UsersListPage() {
           </div>
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
-            <Card>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <Card className="hover:shadow-md transition-shadow">
               <CardContent className="p-4">
                 <div className="flex items-center">
                   <div className="p-2 bg-blue-100 rounded-lg">
@@ -348,7 +316,7 @@ export default function UsersListPage() {
                 </div>
               </CardContent>
             </Card>
-            <Card>
+            <Card className="hover:shadow-md transition-shadow">
               <CardContent className="p-4">
                 <div className="flex items-center">
                   <div className="p-2 bg-green-100 rounded-lg">
@@ -363,22 +331,8 @@ export default function UsersListPage() {
                 </div>
               </CardContent>
             </Card>
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center">
-                  <div className="p-2 bg-yellow-100 rounded-lg">
-                    <Clock className="h-6 w-6 text-yellow-600" />
-                  </div>
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">Pending</p>
-                    <p className="text-2xl font-bold text-gray-900">
-                      {stats.pending}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
+
+            <Card className="hover:shadow-md transition-shadow">
               <CardContent className="p-4">
                 <div className="flex items-center">
                   <div className="p-2 bg-red-100 rounded-lg">
@@ -395,7 +349,7 @@ export default function UsersListPage() {
                 </div>
               </CardContent>
             </Card>
-            <Card>
+            <Card className="hover:shadow-md transition-shadow">
               <CardContent className="p-4">
                 <div className="flex items-center">
                   <div className="p-2 bg-purple-100 rounded-lg">
@@ -418,26 +372,29 @@ export default function UsersListPage() {
               <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
               <Input
                 placeholder="Search users by name, email, or username..."
+                className="pl-10"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
               />
             </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full sm:w-48">
-                <Filter className="h-4 w-4 mr-2" />
+            <Select
+              value={statusFilter}
+              onValueChange={(value: any) => setStatusFilter(value)}
+            >
+              <SelectTrigger className="w-full sm:w-[180px]">
                 <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Status</SelectItem>
                 <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
                 <SelectItem value="inactive">Inactive</SelectItem>
               </SelectContent>
             </Select>
-            <Select value={roleFilter} onValueChange={setRoleFilter}>
-              <SelectTrigger className="w-full sm:w-48">
-                <Shield className="h-4 w-4 mr-2" />
+            <Select
+              value={roleFilter}
+              onValueChange={(value: any) => setRoleFilter(value)}
+            >
+              <SelectTrigger className="w-full sm:w-[180px]">
                 <SelectValue placeholder="Filter by role" />
               </SelectTrigger>
               <SelectContent>
@@ -445,7 +402,6 @@ export default function UsersListPage() {
                 <SelectItem value="admin">Admin</SelectItem>
                 <SelectItem value="manager">Manager</SelectItem>
                 <SelectItem value="user">User</SelectItem>
-                <SelectItem value="viewer">Viewer</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -470,17 +426,20 @@ export default function UsersListPage() {
                     <TableHead>Status</TableHead>
                     <TableHead>Last Login</TableHead>
                     <TableHead>Created</TableHead>
-                    <TableHead>Actions</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredUsers.map((user) => (
-                    <TableRow key={user.id}>
+                  {filteredUsers.map((user, index) => (
+                    <TableRow key={index * 100} className="hover:bg-gray-50">
                       <TableCell>
                         <div className="flex items-center space-x-3">
                           <Avatar className="h-10 w-10">
                             <AvatarImage
-                              src={user.profileImage || '/placeholder.svg'}
+                              src={
+                                user.profileImage ||
+                                '/placeholder.svg?height=40&width=40'
+                              }
                               alt={user.name}
                             />
                             <AvatarFallback>
@@ -501,7 +460,9 @@ export default function UsersListPage() {
                         <div className="space-y-1">
                           <div className="flex items-center text-sm">
                             <Mail className="h-3 w-3 mr-2 text-gray-400" />
-                            {user.email}
+                            <span className="truncate max-w-[200px]">
+                              {user.email}
+                            </span>
                           </div>
                           <div className="flex items-center text-sm text-gray-500">
                             <Phone className="h-3 w-3 mr-2 text-gray-400" />
@@ -531,9 +492,11 @@ export default function UsersListPage() {
                         )}
                       </TableCell>
                       <TableCell>
-                        {new Date(user.createdAt).toLocaleDateString()}
+                        <span className="text-sm text-gray-600">
+                          {new Date(user.createdAt).toLocaleDateString()}
+                        </span>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" className="h-8 w-8 p-0">
@@ -544,11 +507,19 @@ export default function UsersListPage() {
                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
                             <DropdownMenuItem
                               onClick={() =>
-                                navigator.clipboard.writeText(user.email)
+                                copyToClipboard(user.email, 'Email')
                               }
                             >
                               <Mail className="mr-2 h-4 w-4" />
                               Copy Email
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() =>
+                                copyToClipboard(user.phone, 'Phone')
+                              }
+                            >
+                              <Phone className="mr-2 h-4 w-4" />
+                              Copy Phone
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
@@ -558,8 +529,8 @@ export default function UsersListPage() {
                               Edit User
                             </DropdownMenuItem>
                             <DropdownMenuItem
+                              className="text-red-600 focus:text-red-600"
                               onClick={() => handleDeleteUser(user)}
-                              className="text-red-600"
                             >
                               <Trash2 className="mr-2 h-4 w-4" />
                               Delete User
@@ -574,7 +545,7 @@ export default function UsersListPage() {
             </div>
 
             {filteredUsers.length === 0 && (
-              <div className="text-center py-8">
+              <div className="text-center py-12">
                 <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 mb-2">
                   No users found
@@ -627,45 +598,40 @@ export default function UsersListPage() {
   );
 }
 
-// Add User Component (Placeholder)
-function AddUserPage({
-  onBack,
-  onUserAdded,
-}: {
-  onBack: () => void;
-  onUserAdded: (user: Omit<UserData, 'id' | 'createdAt'>) => void;
-}) {
+function AddUserPage({ onBack }: { onBack: () => void }) {
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4">
       <div className="max-w-4xl mx-auto">
-        <div className="mb-6">
-          <Button variant="outline" onClick={onBack} className="mb-4">
-            ← Back to Users
-          </Button>
-        </div>
+        <Button variant="outline" onClick={onBack} className="mb-6">
+          ← Back to Users
+        </Button>
         <UserPageAdd />
       </div>
     </div>
   );
 }
 
-// Edit User Component (Placeholder)
 function EditUserPage({
   user,
   onBack,
-  onUserUpdated,
 }: {
   user: UserData;
   onBack: () => void;
-  onUserUpdated: (user: UserData) => void;
 }) {
+  const client = useQueryClient();
+  // Handler for when the user is updated
+  const handleUserUpdated = async (updatedUser: UserData) => {
+    await client.invalidateQueries({ queryKey: ['users'] });
+    onBack();
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4">
       <div className="max-w-4xl mx-auto">
         <UserPageEdit
           user={user}
-          onUserUpdated={onUserUpdated}
           onBack={onBack}
+          onUserUpdated={handleUserUpdated}
         />
       </div>
     </div>

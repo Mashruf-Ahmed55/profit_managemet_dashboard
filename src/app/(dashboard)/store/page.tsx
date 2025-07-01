@@ -324,7 +324,7 @@ export default function StoresListPage() {
         </div>
 
         {/* Stores Table */}
-        <Card className="shadow-lg rounded-lg border border-gray-200">
+        <Card className="shadow-none rounded-lg border border-gray-200">
           <CardHeader className="border-b border-gray-200">
             <CardTitle className="text-xl font-semibold">
               All Stores ({filteredStores.length})
@@ -550,9 +550,6 @@ function EditStorePage({
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4">
       <div className="max-w-4xl mx-auto">
-        <Button variant="outline" onClick={onBack} className="mb-6">
-          ← Back to Stores
-        </Button>
         <StorePageEdit
           store={store}
           onBack={onBack}

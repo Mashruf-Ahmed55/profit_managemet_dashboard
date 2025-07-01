@@ -1,6 +1,5 @@
 'use client';
 
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -12,15 +11,34 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { SidebarTrigger } from '@/components/ui/sidebar';
-import type { RootState } from '@/store';
-import { Bell, Search, User } from 'lucide-react';
+
+import { useAuthStore } from '@/store/useAuthStore';
+import axios from 'axios';
+import { Search, User } from 'lucide-react';
 import Link from 'next/link';
-import { useSelector } from 'react-redux';
+import { useRouter } from 'next/navigation';
+import toast from 'react-hot-toast';
+import NotificationPanel from '../notification-panel';
 import ToggleTheme from './toggle-theme';
 
 export function Header() {
-  const user = useSelector((state: RootState) => state.auth.user);
+  const router = useRouter();
+  const { user, setUser } = useAuthStore();
+  const logOutUser = async () => {
+    try {
+      await axios.post(
+        'http://localhost:4000/api/users/logout',
+        {},
+        { withCredentials: true } // ✅ send cookie!
+      );
 
+      toast.success('Logout successfully');
+      setUser(null); // clear Zustand or context
+      router.push('/');
+    } catch (error) {
+      toast.error('Logout failed');
+    }
+  };
   return (
     <header className="flex h-17 items-center gap-4 border-b border-gray-200 bg-white px-6 dark:bg-gray-900 dark:border-gray-800 sticky top-0 z-10">
       <SidebarTrigger className="md:hidden" />
@@ -38,18 +56,11 @@ export function Header() {
 
       <div className="flex items-center gap-2">
         {/* Theme Toggle */}
-        <ToggleTheme />
-        {/* Notifications */}
-        <Button
-          variant="outline"
-          size="icon"
-          className="relative rounded-full hover:bg-transparent dark:hover:bg-gray-800 dark:border-gray-700"
-        >
-          <Bell className="h-4 w-4 dark:text-gray-300" />
-          <Badge className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 text-xs dark:bg-primary dark:text-primary-foreground">
-            3
-          </Badge>
-        </Button>
+        <div className="flex items-center gap-x-2">
+          <ToggleTheme />
+          {/* Notifications */}
+          <NotificationPanel />
+        </div>
 
         {/* User Menu */}
         <DropdownMenu>
@@ -86,7 +97,10 @@ export function Header() {
               </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator className="dark:bg-gray-700" />
-            <DropdownMenuItem className="text-red-600 dark:text-red-400 dark:hover:bg-gray-700">
+            <DropdownMenuItem
+              onClick={logOutUser}
+              className="text-red-600 dark:text-red-400 dark:hover:bg-gray-700"
+            >
               Sign out
             </DropdownMenuItem>
           </DropdownMenuContent>

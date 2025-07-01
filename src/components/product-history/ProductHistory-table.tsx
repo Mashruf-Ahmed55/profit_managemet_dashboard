@@ -12,6 +12,13 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table,
@@ -31,16 +38,22 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import {
   Calendar,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
   CreditCard,
   DollarSign,
   Edit2,
   Hash,
   Mail,
   Package,
+  Plus,
   Save,
   X,
 } from 'lucide-react';
 import { useState } from 'react';
+import AddProductHistory from './ProductAdd';
 
 // Types
 export interface ProductHistory {
@@ -95,9 +108,19 @@ export interface Store {
   __v: number;
 }
 
+export interface PaginationInfo {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
 interface ProductsTableProps {
   products: ProductHistory[];
   isLoading: boolean;
+  pagination: PaginationInfo;
+  onPageChange: (page: number) => void;
+  onLimitChange: (limit: number) => void;
 }
 
 // Helper function to format date
@@ -189,42 +212,177 @@ function EditPopover({
   );
 }
 
-const updateSingleField = async (id: string, field: string, value: string) => {
-  try {
-    const res = await axios.patch(
-      `http://localhost:4000/api/product-history/${id}/update`,
-      {
-        field,
-        value,
-      }
-    );
-    console.log(res.data.message); // optional
-  } catch (err) {
-    if (
-      err &&
-      typeof err === 'object' &&
-      'response' in err &&
-      err.response &&
-      typeof err.response === 'object' &&
-      'data' in err.response
+// Pagination Component
+interface PaginationProps {
+  pagination: PaginationInfo;
+  onPageChange: (page: number) => void;
+  onLimitChange: (limit: number) => void;
+}
+
+function PaginationControls({
+  pagination,
+  onPageChange,
+  onLimitChange,
+}: PaginationProps) {
+  const { page, totalPages, total, limit } = pagination;
+
+  const startItem = (page - 1) * limit + 1;
+  const endItem = Math.min(page * limit, total);
+
+  const getVisiblePages = () => {
+    const delta = 2;
+    const range = [];
+    const rangeWithDots = [];
+
+    for (
+      let i = Math.max(2, page - delta);
+      i <= Math.min(totalPages - 1, page + delta);
+      i++
     ) {
-      console.error('Update failed:', err.response.data);
-    } else if (err instanceof Error) {
-      console.error('Update failed:', err.message);
-    } else {
-      console.error('Update failed:', err);
+      range.push(i);
     }
-  }
+
+    if (page - delta > 2) {
+      rangeWithDots.push(1, '...');
+    } else {
+      rangeWithDots.push(1);
+    }
+
+    rangeWithDots.push(...range);
+
+    if (page + delta < totalPages - 1) {
+      rangeWithDots.push('...', totalPages);
+    } else if (totalPages > 1) {
+      rangeWithDots.push(totalPages);
+    }
+
+    return rangeWithDots;
+  };
+
+  return (
+    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-4 py-4 border-t bg-muted/20">
+      {/* Results Info */}
+      <div className="flex items-center gap-4 text-sm text-muted-foreground">
+        <div>
+          Showing {startItem} to {endItem} of {total} results
+        </div>
+        <div className="flex items-center gap-2">
+          <Label htmlFor="limit-select" className="text-sm">
+            Show:
+          </Label>
+          <Select
+            value={limit.toString()}
+            onValueChange={(value) => onLimitChange(Number.parseInt(value))}
+          >
+            <SelectTrigger id="limit-select" className="w-20 h-8">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="10">10</SelectItem>
+              <SelectItem value="20">20</SelectItem>
+              <SelectItem value="50">50</SelectItem>
+              <SelectItem value="100">100</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {/* Pagination Controls */}
+      <div className="flex items-center gap-2">
+        {/* First Page */}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => onPageChange(1)}
+          disabled={page === 1}
+          className="h-8 w-8 p-0"
+        >
+          <ChevronsLeft className="h-4 w-4" />
+        </Button>
+
+        {/* Previous Page */}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => onPageChange(page - 1)}
+          disabled={page === 1}
+          className="h-8 w-8 p-0"
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
+
+        {/* Page Numbers */}
+        <div className="flex items-center gap-1">
+          {getVisiblePages().map((pageNum, index) => (
+            <div key={index}>
+              {pageNum === '...' ? (
+                <span className="px-2 py-1 text-sm text-muted-foreground">
+                  ...
+                </span>
+              ) : (
+                <Button
+                  variant={pageNum === page ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => onPageChange(pageNum as number)}
+                  className="h-8 w-8 p-0"
+                >
+                  {pageNum}
+                </Button>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* Next Page */}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => onPageChange(page + 1)}
+          disabled={page === totalPages}
+          className="h-8 w-8 p-0"
+        >
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+
+        {/* Last Page */}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => onPageChange(totalPages)}
+          disabled={page === totalPages}
+          className="h-8 w-8 p-0"
+        >
+          <ChevronsRight className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// Replace the axios import and replace the updateSingleField function with:
+const updateSingleField = async (id: string, field: string, value: string) => {
+  const res = await axios.patch(
+    `http://localhost:4000/api/product-history/${id}/update`,
+    {
+      field,
+      value,
+    }
+  );
+  return res.data;
 };
 
 export function ProductHistoryTable({
   products,
   isLoading,
+  pagination,
+  onPageChange,
+  onLimitChange,
 }: ProductsTableProps) {
   const [editingData, setEditingData] = useState<Record<string, any>>({});
   const client = useQueryClient();
+  // Update the mutation in the ProductHistoryTable component:
   const mutation = useMutation({
-    mutationFn: ({
+    mutationFn: async ({
       id,
       field,
       value,
@@ -232,8 +390,13 @@ export function ProductHistoryTable({
       id: string;
       field: string;
       value: string;
-    }) => updateSingleField(id, field, value),
-    onSuccess: () => {
+    }) => {
+      await updateSingleField(id, field, value);
+      return { id, field, value };
+    },
+    onSuccess: (data) => {
+      console.log('Field updated successfully:', data);
+      // In a real app, you would invalidate queries here:
       client.invalidateQueries({ queryKey: ['productsHistory'] });
     },
     onError: (error) => {
@@ -295,6 +458,15 @@ export function ProductHistoryTable({
                 ))}
               </TableBody>
             </Table>
+          </div>
+          {/* Loading Pagination */}
+          <div className="flex items-center justify-between gap-4 px-4 py-4 border-t bg-muted/20">
+            <Skeleton className="h-4 w-48" />
+            <div className="flex items-center gap-2">
+              {Array.from({ length: 7 }).map((_, i) => (
+                <Skeleton key={i} className="h-8 w-8" />
+              ))}
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -534,12 +706,30 @@ export function ProductHistoryTable({
                         />
                       </div>
                     </TableCell>
+                    <TableCell>
+                      <AddProductHistory
+                        productId={product.product._id}
+                        node={
+                          <Button size={'icon'} variant={'outline'}>
+                            <Plus />
+                          </Button>
+                        }
+                        storeId={product.store._id}
+                      />
+                    </TableCell>
                   </TableRow>
                 );
               })}
             </TableBody>
           </Table>
         </div>
+
+        {/* Pagination Controls */}
+        <PaginationControls
+          pagination={pagination}
+          onPageChange={onPageChange}
+          onLimitChange={onLimitChange}
+        />
       </CardContent>
     </Card>
   );
