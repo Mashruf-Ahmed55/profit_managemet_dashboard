@@ -9,9 +9,8 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: 'Admin Dashboard - Veeqo Style',
-  description: 'Modern admin dashboard built with Next.js and shadcn/ui',
-  generator: 'v0.dev',
+  title: 'Green FBA | Mapel BPO',
+  description: 'Green FBA | Mapel BPO',
 };
 
 export default function RootLayout({
