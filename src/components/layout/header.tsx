@@ -12,8 +12,8 @@ import {
 import { Input } from '@/components/ui/input';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 
+import axiosInstance from '@/lib/axiosInstance';
 import { useAuthStore } from '@/store/useAuthStore';
-import axios from 'axios';
 import { Search, User } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -26,8 +26,8 @@ export function Header() {
   const { user, setUser } = useAuthStore();
   const logOutUser = async () => {
     try {
-      await axios.post(
-        'http://localhost:4000/api/users/logout',
+      await axiosInstance.post(
+        '/api/users/logout',
         {},
         { withCredentials: true } // ✅ send cookie!
       );

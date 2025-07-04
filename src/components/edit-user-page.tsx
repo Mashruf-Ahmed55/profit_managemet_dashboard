@@ -31,7 +31,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import axios from 'axios';
+import axiosInstance from '@/lib/axiosInstance';
 import {
   AlertCircle,
   ArrowLeft,
@@ -296,8 +296,8 @@ export default function UserPageEdit({
         form.append('profileImage', blob, 'profile.jpg');
       }
 
-      const res = await axios.put(
-        `http://localhost:4000/api/users/update-user/${user?._id}`,
+      const res = await axiosInstance.put(
+        `/api/users/update-user/${user?._id}`,
         form,
         { headers: { 'Content-Type': 'multipart/form-data' } }
       );

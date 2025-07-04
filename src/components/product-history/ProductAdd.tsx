@@ -13,8 +13,8 @@ import {
 } from '@/components/ui/dialog'; // adjust path as per your setup
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import axiosInstance from '@/lib/axiosInstance';
 import { useQueryClient } from '@tanstack/react-query';
-import axios from 'axios';
 import React from 'react';
 import { SubmitHandler, useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
@@ -54,9 +54,9 @@ const AddProductHistory: React.FC<AddProductHistoryProps> = ({
     console.log('productID', productId);
     console.log('storeID', storeId);
 
-    await axios
+    await axiosInstance
       .post(
-        `http://localhost:4000/api/product-history/create-product-history/${productId}`,
+        `/api/product-history/create-product-history/${productId}`,
         {
           storeID: storeId,
           quantity: Number(data.quantity),

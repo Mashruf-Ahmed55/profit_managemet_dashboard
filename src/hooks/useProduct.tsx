@@ -1,7 +1,7 @@
 'use client';
 
+import axiosInstance from '@/lib/axiosInstance';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import axios from 'axios';
 export interface Product {
   _id: string;
   mart: string;
@@ -69,8 +69,8 @@ const fetchProducts = async (
       searchParams.append('mart', params.storeId);
     }
 
-    const response = await axios.get(
-      `http://localhost:4000/api/products/get-products?${searchParams.toString()}`
+    const response = await axiosInstance.get(
+      `/api/products/get-products?${searchParams.toString()}`
     );
 
     return response.data;

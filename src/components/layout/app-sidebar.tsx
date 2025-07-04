@@ -1,9 +1,5 @@
 'use client';
 
-import { Home, Package, ShoppingCart, TrendingUp, Users } from 'lucide-react';
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-
 import {
   Sidebar,
   SidebarContent,
@@ -18,6 +14,10 @@ import {
   SidebarRail,
 } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
+import { Home, Package, ShoppingCart, Users } from 'lucide-react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { FaCanadianMapleLeaf } from 'react-icons/fa6';
 
 // Navigation items
 const navigationItems = [
@@ -61,14 +61,14 @@ export function AppSidebar() {
       <SidebarHeader className="border-b border-gray-200 dark:border-gray-800 p-4">
         <div className="flex items-center gap-2">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary dark:bg-primary">
-            <TrendingUp className="h-4 w-4 text-primary-foreground" />
+            <FaCanadianMapleLeaf className="h-4 w-4 text-primary-foreground" />
           </div>
           <div className="grid flex-1 text-left text-sm leading-tight">
             <span className="truncate font-semibold dark:text-gray-100">
               Admin Dashboard
             </span>
             <span className="truncate text-xs text-muted-foreground dark:text-gray-400">
-              Veeqo Style
+              Manage your store
             </span>
           </div>
         </div>

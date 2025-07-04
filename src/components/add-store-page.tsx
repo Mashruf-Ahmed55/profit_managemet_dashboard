@@ -25,6 +25,7 @@ import {
 } from './ui/card';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
+import axiosInstance from '@/lib/axiosInstance';
 
 interface NewStoreFormValues {
   storeId: string;
@@ -92,8 +93,8 @@ export default function StorePageAdd() {
         formData.append('storeImage', data.imageFile);
       }
 
-      const res = await axios.post(
-        'http://localhost:4000/api/stores/create-store',
+      const res = await axiosInstance.post(
+        '/api/stores/create-store',
         formData,
         {
           headers: {
