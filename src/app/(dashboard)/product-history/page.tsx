@@ -3,6 +3,7 @@
 import { ProductHistoryTable } from '@/components/product-history/ProductHistory-table';
 import { SearchFilter } from '@/components/product-history/searchFilter';
 import { useStoresData } from '@/hooks/useStoreData';
+import axiosInstance from '@/lib/axiosInstance';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import { useEffect, useState } from 'react';
@@ -93,8 +94,8 @@ export const getProducts = async ({
   limit?: number;
 }) => {
   try {
-    const res = await axios.get(
-      'http://localhost:4000/api/product-history/get-all-product-history',
+    const res = await axiosInstance.get(
+      '/api/product-history/get-all-product-history',
       {
         params: {
           search: search || '',

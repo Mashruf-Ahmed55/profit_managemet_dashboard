@@ -1,7 +1,7 @@
 'use client';
 
+import axiosInstance from '@/lib/axiosInstance';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import axios from 'axios';
 
 // Define the expected API response type
 
@@ -26,8 +26,8 @@ const fetchOrders = async ({
   if (search) params.append('search', search);
   if (status) params.append('status', status);
 
-  const response = await axios.get(
-    `http://localhost:4000/api/orders/get-orders?${params.toString()}`
+  const response = await axiosInstance.get(
+    `/api/orders/get-orders?${params.toString()}`
   );
 
   return response.data;

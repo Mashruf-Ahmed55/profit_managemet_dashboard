@@ -37,6 +37,7 @@ import {
   X,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import axiosInstance from '@/lib/axiosInstance';
 
 interface UserProfile {
   name: string;
@@ -56,8 +57,8 @@ export default function Component() {
   const { data: profile = {}, isLoading } = useQuery({
     queryKey: ['user', user?.id || null],
     queryFn: async () => {
-      const response = await axios.get(
-        `http://localhost:4000/api/users/get-user/${user?.id}`
+      const response = await axiosInstance.get(
+        `/api/users/get-user/${user?.id}`
       );
       return response.data.user;
     },

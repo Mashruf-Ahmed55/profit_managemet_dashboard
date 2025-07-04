@@ -9,8 +9,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import axiosInstance from '@/lib/axiosInstance';
 import { useQuery } from '@tanstack/react-query';
-import axios from 'axios';
 import { Search, X } from 'lucide-react';
 
 // ✅ Store Interface
@@ -42,9 +42,7 @@ interface ProductsFiltersProps {
 // ✅ Fetch stores
 const getStore = async (): Promise<Store[]> => {
   try {
-    const response = await axios.get(
-      'http://localhost:4000/api/stores/get-all-store'
-    );
+    const response = await axiosInstance.get('/api/stores/get-all-store');
     return response.data.data;
   } catch (error) {
     console.error('Error fetching stores:', error);

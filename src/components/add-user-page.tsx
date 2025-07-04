@@ -40,6 +40,7 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import toast from 'react-hot-toast';
+import axiosInstance from '@/lib/axiosInstance';
 
 interface NewUser {
   name: string;
@@ -208,8 +209,8 @@ export default function UserPageAdd() {
 
   const mutation = useMutation({
     mutationFn: async (data: NewUser) => {
-      const response = await axios.post(
-        'http://localhost:4000/api/users/register',
+      const response = await axiosInstance.post(
+        '/api/users/register',
         data
       );
       return response.data;

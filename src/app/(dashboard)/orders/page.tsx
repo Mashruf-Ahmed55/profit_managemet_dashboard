@@ -2,14 +2,15 @@
 
 import { OrdersTable } from '@/components/orders/orders-table';
 import { Button } from '@/components/ui/button';
+import axiosInstance from '@/lib/axiosInstance';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import { Plus } from 'lucide-react';
 
 const getOrders = async () => {
   try {
-    const response = await axios.get(
-      'http://localhost:4000/api/orders/get-orders'
+    const response = await axiosInstance.get(
+      '/api/orders/get-orders'
     );
     return response.data.orders;
   } catch (error) {

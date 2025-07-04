@@ -10,6 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import axiosInstance from '@/lib/axiosInstance';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import {
@@ -119,8 +120,8 @@ export default function ProductDetailsPage() {
   const { data: product } = useQuery({
     queryKey: ['productsHistoryList', id],
     queryFn: async (): Promise<ProductWithHistory> => {
-      const res = await axios.get(
-        `http://localhost:4000/api/product-history/get-product-history-list/${id}`
+      const res = await axiosInstance.get(
+        `/api/product-history/get-product-history-list/${id}`
       );
       return res.data.data;
     },

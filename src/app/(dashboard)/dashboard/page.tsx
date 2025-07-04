@@ -17,6 +17,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Store, useStoresData } from '@/hooks/useStoreData';
+import axiosInstance from '@/lib/axiosInstance';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import { format } from 'date-fns';
@@ -85,8 +86,8 @@ export default function Component() {
   const { data, isLoading, isError } = useQuery({
     queryKey: ['profit'],
     queryFn: async (): Promise<DashboardResponse> => {
-      const res = await axios.get(
-        'http://localhost:4000/api/profits/get-all-profits'
+      const res = await axiosInstance.get(
+        '/api/profits/get-all-profits'
       );
       return res.data;
     },
@@ -100,8 +101,8 @@ export default function Component() {
   } = useQuery({
     queryKey: ['customProfit', startDate, endDate, storeId],
     queryFn: async () => {
-      const res = await axios.get(
-        'http://localhost:4000/api/profits/get-all-profits',
+      const res = await axiosInstance.get(
+        '/api/profits/get-all-profits',
         {
           params: {
             startDate: startDate?.toISOString(),

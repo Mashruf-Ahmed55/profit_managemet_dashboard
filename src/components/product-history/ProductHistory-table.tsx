@@ -34,8 +34,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import axiosInstance from '@/lib/axiosInstance';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import axios from 'axios';
 import {
   Calendar,
   ChevronLeft,
@@ -361,13 +361,10 @@ function PaginationControls({
 
 // Replace the axios import and replace the updateSingleField function with:
 const updateSingleField = async (id: string, field: string, value: string) => {
-  const res = await axios.patch(
-    `http://localhost:4000/api/product-history/${id}/update`,
-    {
-      field,
-      value,
-    }
-  );
+  const res = await axiosInstance.patch(`/api/product-history/${id}/update`, {
+    field,
+    value,
+  });
   return res.data;
 };
 

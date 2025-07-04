@@ -3,10 +3,10 @@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import axiosInstance from '@/lib/axiosInstance';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useMutation } from '@tanstack/react-query';
-import axios from 'axios';
 import { AtSignIcon, EyeIcon, EyeOffIcon, LockIcon } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useId, useState } from 'react';
@@ -37,13 +37,9 @@ export function LoginForm({
 
   const mutation = useMutation({
     mutationFn: async (data: { email: string; password: string }) => {
-      const res = await axios.post(
-        'http://localhost:4000/api/users/login',
-        data,
-        {
-          withCredentials: true,
-        }
-      );
+      const res = await axiosInstance.post('/api/users/login', data, {
+        withCredentials: true,
+      });
       return res.data;
     },
     onSuccess: (data) => {
