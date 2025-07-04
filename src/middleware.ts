@@ -1,20 +1,25 @@
-// middleware.ts
 import { NextRequest, NextResponse } from 'next/server';
 
 export function middleware(request: NextRequest) {
   const token = request.cookies.get('token')?.value;
-  // Allow access to homepage always
-  if (request.nextUrl.pathname === '/') {
-    return NextResponse.next();
+  const { pathname } = request.nextUrl;
+
+  // ✅ Always allow homepage
+  if (pathname === '/') return NextResponse.next();
+
+  // ✅ Block access to login/register if already logged in
+  if (pathname === '/' && token) {
+    return NextResponse.redirect(new URL('/dashboard', request.url)); // or home
   }
 
-  // Allow access only if token exists
-  if (!token) {
+  // ✅ Block private routes if not logged in
+  if (!token && !['/'].includes(pathname)) {
     return NextResponse.redirect(new URL('/', request.url));
   }
 
   return NextResponse.next();
 }
+
 export const config = {
   matcher: [
     '/((?!api|_next/static|_next/image|favicon.ico|favicon.svg|logo.png|$).*)',

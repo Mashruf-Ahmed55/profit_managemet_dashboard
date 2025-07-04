@@ -19,7 +19,6 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import NotificationPanel from '../notification-panel';
-import ToggleTheme from './toggle-theme';
 
 export function Header() {
   const router = useRouter();
@@ -57,7 +56,7 @@ export function Header() {
       <div className="flex items-center gap-2">
         {/* Theme Toggle */}
         <div className="flex items-center gap-x-2">
-          <ToggleTheme />
+          {/* <ToggleTheme /> */}
           {/* Notifications */}
           <NotificationPanel />
         </div>
