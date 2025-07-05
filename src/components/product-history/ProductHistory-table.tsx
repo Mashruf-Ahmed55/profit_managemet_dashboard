@@ -223,7 +223,12 @@ function EditPopover({
               <X className="h-3 w-3 mr-1" />
               Cancel
             </Button>
-            <Button size="sm" onClick={handleSave} className="h-8">
+            <Button
+              type="submit"
+              size="sm"
+              onClick={handleSave}
+              className="h-8"
+            >
               <Save className="h-3 w-3 mr-1" />
               Save
             </Button>
@@ -301,7 +306,12 @@ function EditPopoverSupplier({
               <X className="h-3 w-3 mr-1" />
               Cancel
             </Button>
-            <Button size="sm" onClick={handleSave} className="h-8">
+            <Button
+              type="submit"
+              size="sm"
+              onClick={handleSave}
+              className="h-8"
+            >
               <Save className="h-3 w-3 mr-1" />
               Save
             </Button>
