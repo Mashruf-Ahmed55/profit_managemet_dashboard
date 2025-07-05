@@ -1,4 +1,4 @@
-import lgImage from '@/assets/lg.png';
+import lgImage from '@/assets/bg.jpg';
 import { LoginForm } from '@/components/LoginForm';
 import Link from 'next/link';
 import { FaCanadianMapleLeaf } from 'react-icons/fa6';

@@ -5,7 +5,6 @@ import { SearchFilter } from '@/components/product-history/searchFilter';
 import { useStoresData } from '@/hooks/useStoreData';
 import axiosInstance from '@/lib/axiosInstance';
 import { useQuery } from '@tanstack/react-query';
-import axios from 'axios';
 import { useEffect, useState } from 'react';
 
 // ✅ Interface kept same as before
@@ -13,12 +12,21 @@ export interface ProductHistory {
   _id: string;
   productId: string;
   storeID: string;
-  quantity: string;
+  purchaseQuantity: number;
+  receiveQuantity: number;
+  lostQuantity: number;
+  sendToWFS: number;
+  Remaining: number;
+  Status: string;
   costOfPrice: string;
   sellPrice: string;
   email: string;
   card: string;
-  supplier: string;
+  supplier: {
+    _id: string;
+    name: string;
+    link: string;
+  };
   totalPrice: string;
   date: string;
   __v: number;
