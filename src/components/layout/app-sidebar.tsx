@@ -17,8 +17,9 @@ import { cn } from '@/lib/utils';
 import { Home, Package, ShoppingCart, Users } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { BiStoreAlt } from 'react-icons/bi';
 import { FaCanadianMapleLeaf } from 'react-icons/fa6';
-
+import { MdManageHistory } from 'react-icons/md';
 // Navigation items
 const navigationItems = [
   {
@@ -39,12 +40,12 @@ const navigationItems = [
   {
     title: 'Purchases History',
     url: '/product-history',
-    icon: Package,
+    icon: MdManageHistory,
   },
   {
     title: 'Stores',
     url: '/store',
-    icon: Package,
+    icon: BiStoreAlt,
   },
   {
     title: 'Users',
