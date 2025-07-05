@@ -34,9 +34,9 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import axiosInstance from '@/lib/axiosInstance';
 import { cn } from '@/lib/utils';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import axios from 'axios';
 import {
   ArrowUpDown,
   Calendar,
@@ -464,13 +464,10 @@ const updateSingleField = async (id: string, field: string, value: string) => {
   console.log('id', id);
   console.log('Field', field);
   console.log('Value', value);
-  const res = await axios.patch(
-    `http://localhost:4000/api/product-history/${id}/update`,
-    {
-      field,
-      value,
-    }
-  );
+  const res = await axiosInstance.patch(`/api/product-history/${id}/update`, {
+    field,
+    value,
+  });
   return res.data;
 };
 
