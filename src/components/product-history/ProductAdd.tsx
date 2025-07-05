@@ -10,13 +10,28 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@/components/ui/dialog'; // adjust path as per your setup
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
 import axiosInstance from '@/lib/axiosInstance';
 import { useQueryClient } from '@tanstack/react-query';
-import React from 'react';
-import { SubmitHandler, useForm } from 'react-hook-form';
+import {
+  Calendar,
+  CreditCard,
+  DollarSign,
+  Link,
+  Mail,
+  Minus,
+  Package,
+  Send,
+  Store,
+  TrendingDown,
+  TrendingUp,
+} from 'lucide-react';
+import type React from 'react';
+import { useState } from 'react';
+import { type SubmitHandler, useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
 
 interface AddProductHistoryProps {
@@ -26,10 +41,14 @@ interface AddProductHistoryProps {
 }
 
 interface FormInputs {
-  supplier: string;
+  supplierName: string;
+  supplierLink: string;
   card: string;
-  quantity: number;
-  costPrice: number;
+  purchase: number;
+  received: number;
+  lost: number;
+  sentToWfs: number;
+  costOfPrice: number;
   sellPrice: number;
   email: string;
   dateTime: string;
@@ -40,199 +59,496 @@ const AddProductHistory: React.FC<AddProductHistoryProps> = ({
   node,
   storeId,
 }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const {
     register,
     handleSubmit,
     formState: { errors },
     reset,
-  } = useForm<FormInputs>();
+    watch,
+  } = useForm<FormInputs>({
+    defaultValues: {
+      purchase: 0,
+      received: 0,
+      lost: 0,
+      sentToWfs: 0,
+      costOfPrice: 0,
+      sellPrice: 0,
+      dateTime: '', // Current date-time
+    },
+  });
 
   const query = useQueryClient();
 
-  const onSubmit: SubmitHandler<FormInputs> = async (data) => {
-    console.log('data', data);
-    console.log('productID', productId);
-    console.log('storeID', storeId);
+  // Watch values for real-time calculations
+  const watchedValues = watch([
+    'purchase',
+    'received',
+    'lost',
+    'sentToWfs',
+    'costOfPrice',
+  ]);
+  const [purchase, received, lost, sentToWfs, costOfPrice] = watchedValues;
 
-    await axiosInstance
-      .post(
+  // Calculate remaining quantity
+  const remaining = (received || 0) - (sentToWfs || 0);
+  const totalCost = (purchase || 0) * (costOfPrice || 0);
+  const wfsCost = (sentToWfs || 0) * (costOfPrice || 0);
+  const remainingCost = totalCost - wfsCost;
+
+  const onSubmit: SubmitHandler<FormInputs> = async (data) => {
+    setIsSubmitting(true);
+
+    try {
+      console.log('Form data:', data);
+      console.log('Product ID:', productId);
+      console.log('Store ID:', storeId);
+
+      const supplierObject = {
+        name: data.supplierName,
+        link: data.supplierLink,
+      };
+
+      await axiosInstance.post(
         `/api/product-history/create-product-history/${productId}`,
         {
           storeID: storeId,
-          quantity: Number(data.quantity),
-          costOfPrice: Number(data.costPrice),
+          purchase: Number(data.purchase),
+          received: Number(data.received),
+          lost: Number(data.lost),
+          sentToWfs: Number(data.sentToWfs),
+          costOfPrice: Number(data.costOfPrice),
           sellPrice: Number(data.sellPrice),
           date: data.dateTime,
           email: data.email,
           card: data.card,
-          supplier: data.supplier,
+          supplier: supplierObject,
         },
         {
           withCredentials: true,
         }
-      )
-      .then((res) => {
-        query.invalidateQueries({ queryKey: ['productsHistory'] });
-        toast.success('Product history added successfully');
-      })
-      .catch((err) => toast.error("Product history couldn't be added"));
+      );
+
+      query.invalidateQueries({ queryKey: ['productsHistory'] });
+      toast.success('Product history added successfully');
+      reset();
+      setIsOpen(false);
+    } catch (err) {
+      console.error('Error adding product history:', err);
+      toast.error("Product history couldn't be added");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
-    <Dialog>
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>{node}</DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <form onSubmit={handleSubmit(onSubmit)}>
-          <DialogHeader>
-            <DialogTitle>Add Product History</DialogTitle>
-            <DialogDescription></DialogDescription>
+          <DialogHeader className="pb-4">
+            <DialogTitle className="flex items-center gap-2 text-xl">
+              <Package className="h-5 w-5 text-blue-600" />
+              Add Product History
+            </DialogTitle>
+            <DialogDescription className="text-slate-600">
+              Add a new entry to the product history with detailed information
+              about quantities, pricing, and supplier details.
+            </DialogDescription>
           </DialogHeader>
 
-          <div className="grid gap-4 py-2">
-            {/* Supplier */}
-            <div className="grid gap-1">
-              <Label htmlFor="supplier">Supplier</Label>
-              <Input
-                id="supplier"
-                {...register('supplier', { required: 'Supplier is required' })}
-                placeholder="Supplier name"
-                aria-invalid={errors.supplier ? 'true' : 'false'}
-              />
-              {errors.supplier && (
-                <p role="alert" className="text-red-600 text-sm">
-                  {errors.supplier.message}
-                </p>
-              )}
+          <div className="grid gap-6 py-4">
+            {/* Supplier Information */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                <Store className="h-4 w-4 text-purple-600" />
+                Supplier Information
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="supplierName" className="text-sm font-medium">
+                    Supplier Name *
+                  </Label>
+                  <Input
+                    id="supplierName"
+                    {...register('supplierName', {
+                      required: 'Supplier name is required',
+                    })}
+                    placeholder="Enter supplier name"
+                    className="transition-colors focus:border-purple-500"
+                    aria-invalid={errors.supplierName ? 'true' : 'false'}
+                  />
+                  {errors.supplierName && (
+                    <p role="alert" className="text-red-600 text-xs">
+                      {errors.supplierName.message}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="supplierLink" className="text-sm font-medium">
+                    Supplier Link *
+                  </Label>
+                  <div className="relative">
+                    <Link className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                    <Input
+                      id="supplierLink"
+                      {...register('supplierLink', {
+                        required: 'Supplier link is required',
+                        pattern: {
+                          value: /^https?:\/\/.+/,
+                          message:
+                            'Please enter a valid URL (starting with http:// or https://)',
+                        },
+                      })}
+                      placeholder="https://supplier-website.com"
+                      className="pl-10 transition-colors focus:border-purple-500"
+                      aria-invalid={errors.supplierLink ? 'true' : 'false'}
+                    />
+                  </div>
+                  {errors.supplierLink && (
+                    <p role="alert" className="text-red-600 text-xs">
+                      {errors.supplierLink.message}
+                    </p>
+                  )}
+                </div>
+              </div>
             </div>
 
-            {/* Card */}
-            <div className="grid gap-1">
-              <Label htmlFor="card">Card</Label>
-              <Input
-                id="card"
-                {...register('card', { required: 'Card is required' })}
-                placeholder="Card info"
-                aria-invalid={errors.card ? 'true' : 'false'}
-              />
-              {errors.card && (
-                <p role="alert" className="text-red-600 text-sm">
-                  {errors.card.message}
-                </p>
-              )}
+            <Separator />
+
+            {/* Quantity Information */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                <Package className="h-4 w-4 text-blue-600" />
+                Quantity Details
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="purchase"
+                    className="text-sm font-medium flex items-center gap-1"
+                  >
+                    <TrendingUp className="h-3 w-3 text-blue-600" />
+                    Purchase *
+                  </Label>
+                  <Input
+                    id="purchase"
+                    type="number"
+                    min="0"
+                    {...register('purchase', {
+                      required: 'Purchase quantity is required',
+                      valueAsNumber: true,
+                      min: { value: 0, message: 'Cannot be negative' },
+                    })}
+                    placeholder="0"
+                    className="transition-colors focus:border-blue-500"
+                    aria-invalid={errors.purchase ? 'true' : 'false'}
+                  />
+                  {errors.purchase && (
+                    <p role="alert" className="text-red-600 text-xs">
+                      {errors.purchase.message}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="received"
+                    className="text-sm font-medium flex items-center gap-1"
+                  >
+                    <TrendingUp className="h-3 w-3 text-green-600" />
+                    Received
+                  </Label>
+                  <Input
+                    id="received"
+                    type="number"
+                    min="0"
+                    {...register('received', {
+                      valueAsNumber: true,
+                      min: { value: 0, message: 'Cannot be negative' },
+                    })}
+                    placeholder="0"
+                    className="transition-colors focus:border-green-500"
+                    aria-invalid={errors.received ? 'true' : 'false'}
+                  />
+                  {errors.received && (
+                    <p role="alert" className="text-red-600 text-xs">
+                      {errors.received.message}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="lost"
+                    className="text-sm font-medium flex items-center gap-1"
+                  >
+                    <TrendingDown className="h-3 w-3 text-red-600" />
+                    Lost
+                  </Label>
+                  <Input
+                    id="lost"
+                    type="number"
+                    min="0"
+                    {...register('lost', {
+                      valueAsNumber: true,
+                      min: { value: 0, message: 'Cannot be negative' },
+                    })}
+                    placeholder="0"
+                    className="transition-colors focus:border-red-500"
+                    aria-invalid={errors.lost ? 'true' : 'false'}
+                  />
+                  {errors.lost && (
+                    <p role="alert" className="text-red-600 text-xs">
+                      {errors.lost.message}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="sentToWfs"
+                    className="text-sm font-medium flex items-center gap-1"
+                  >
+                    <Send className="h-3 w-3 text-cyan-600" />
+                    Sent to WFS
+                  </Label>
+                  <Input
+                    id="sentToWfs"
+                    type="number"
+                    min="0"
+                    {...register('sentToWfs', {
+                      valueAsNumber: true,
+                      min: { value: 0, message: 'Cannot be negative' },
+                    })}
+                    placeholder="0"
+                    className="transition-colors focus:border-cyan-500"
+                    aria-invalid={errors.sentToWfs ? 'true' : 'false'}
+                  />
+                  {errors.sentToWfs && (
+                    <p role="alert" className="text-red-600 text-xs">
+                      {errors.sentToWfs.message}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Calculated Values Display */}
+              <div className="bg-slate-50 p-3 rounded-lg">
+                <div className="flex items-center gap-2 text-sm font-medium text-slate-700 mb-2">
+                  <Minus className="h-4 w-4" />
+                  Calculated Values
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                  <div>
+                    <span className="text-slate-600">Remaining:</span>
+                    <span
+                      className={`ml-2 font-semibold ${
+                        remaining >= 0 ? 'text-green-600' : 'text-red-600'
+                      }`}
+                    >
+                      {remaining}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-slate-600">Total Cost:</span>
+                    <span className="ml-2 font-semibold text-purple-600">
+                      ${totalCost.toFixed(2)}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-slate-600">WFS Cost:</span>
+                    <span className="ml-2 font-semibold text-orange-600">
+                      ${wfsCost.toFixed(2)}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-slate-600">Remaining Cost:</span>
+                    <span className="ml-2 font-semibold text-teal-600">
+                      ${remainingCost.toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+              </div>
             </div>
 
-            {/* Quantity */}
-            <div className="grid gap-1">
-              <Label htmlFor="quantity">Quantity</Label>
-              <Input
-                id="quantity"
-                type="number"
-                {...register('quantity', {
-                  required: 'Quantity is required',
-                  valueAsNumber: true,
-                  min: { value: 1, message: 'Minimum quantity is 1' },
-                })}
-                placeholder="Quantity"
-                aria-invalid={errors.quantity ? 'true' : 'false'}
-              />
-              {errors.quantity && (
-                <p role="alert" className="text-red-600 text-sm">
-                  {errors.quantity.message}
-                </p>
-              )}
+            <Separator />
+
+            {/* Pricing Information */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                <DollarSign className="h-4 w-4 text-green-600" />
+                Pricing Information
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="costOfPrice" className="text-sm font-medium">
+                    Cost Price *
+                  </Label>
+                  <div className="relative">
+                    <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                    <Input
+                      id="costOfPrice"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      {...register('costOfPrice', {
+                        required: 'Cost price is required',
+                        valueAsNumber: true,
+                        min: {
+                          value: 0,
+                          message: 'Cost price cannot be negative',
+                        },
+                      })}
+                      placeholder="0.00"
+                      className="pl-10 transition-colors focus:border-green-500"
+                      aria-invalid={errors.costOfPrice ? 'true' : 'false'}
+                    />
+                  </div>
+                  {errors.costOfPrice && (
+                    <p role="alert" className="text-red-600 text-xs">
+                      {errors.costOfPrice.message}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="sellPrice" className="text-sm font-medium">
+                    Sell Price *
+                  </Label>
+                  <div className="relative">
+                    <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                    <Input
+                      id="sellPrice"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      {...register('sellPrice', {
+                        required: 'Sell price is required',
+                        valueAsNumber: true,
+                        min: {
+                          value: 0,
+                          message: 'Sell price cannot be negative',
+                        },
+                      })}
+                      placeholder="0.00"
+                      className="pl-10 transition-colors focus:border-blue-500"
+                      aria-invalid={errors.sellPrice ? 'true' : 'false'}
+                    />
+                  </div>
+                  {errors.sellPrice && (
+                    <p role="alert" className="text-red-600 text-xs">
+                      {errors.sellPrice.message}
+                    </p>
+                  )}
+                </div>
+              </div>
             </div>
 
-            {/* Cost Price */}
-            <div className="grid gap-1">
-              <Label htmlFor="costPrice">Cost Price</Label>
-              <Input
-                id="costPrice"
-                type="number"
-                step="0.01"
-                {...register('costPrice', {
-                  required: 'Cost price is required',
-                  valueAsNumber: true,
-                  min: { value: 0, message: 'Cost price cannot be negative' },
-                })}
-                placeholder="Cost Price"
-                aria-invalid={errors.costPrice ? 'true' : 'false'}
-              />
-              {errors.costPrice && (
-                <p role="alert" className="text-red-600 text-sm">
-                  {errors.costPrice.message}
-                </p>
-              )}
-            </div>
+            <Separator />
 
-            {/* Sell Price */}
-            <div className="grid gap-1">
-              <Label htmlFor="sellPrice">Sell Price</Label>
-              <Input
-                id="sellPrice"
-                type="number"
-                step="0.01"
-                {...register('sellPrice', {
-                  required: 'Sell price is required',
-                  valueAsNumber: true,
-                  min: { value: 0, message: 'Sell price cannot be negative' },
-                })}
-                placeholder="Sell Price"
-                aria-invalid={errors.sellPrice ? 'true' : 'false'}
-              />
-              {errors.sellPrice && (
-                <p role="alert" className="text-red-600 text-sm">
-                  {errors.sellPrice.message}
-                </p>
-              )}
-            </div>
+            {/* Additional Information */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                <Mail className="h-4 w-4 text-pink-600" />
+                Additional Information
+              </div>
 
-            {/* Email */}
-            <div className="grid gap-1">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                {...register('email', {
-                  required: 'Email is required',
-                  pattern: {
-                    value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-                    message: 'Invalid email address',
-                  },
-                })}
-                placeholder="Email"
-                aria-invalid={errors.email ? 'true' : 'false'}
-              />
-              {errors.email && (
-                <p role="alert" className="text-red-600 text-sm">
-                  {errors.email.message}
-                </p>
-              )}
-            </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="card" className="text-sm font-medium">
+                    Card *
+                  </Label>
+                  <div className="relative">
+                    <CreditCard className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                    <Input
+                      id="card"
+                      {...register('card', { required: 'Card is required' })}
+                      placeholder="Card information"
+                      className="pl-10 transition-colors focus:border-indigo-500"
+                      aria-invalid={errors.card ? 'true' : 'false'}
+                    />
+                  </div>
+                  {errors.card && (
+                    <p role="alert" className="text-red-600 text-xs">
+                      {errors.card.message}
+                    </p>
+                  )}
+                </div>
 
-            {/* Date & Time */}
-            <div className="grid gap-1">
-              <Label htmlFor="dateTime">Date & Time</Label>
-              <Input
-                id="dateTime"
-                type="datetime-local"
-                {...register('dateTime', {
-                  required: 'Date & Time is required',
-                })}
-                aria-invalid={errors.dateTime ? 'true' : 'false'}
-              />
-              {errors.dateTime && (
-                <p role="alert" className="text-red-600 text-sm">
-                  {errors.dateTime.message}
-                </p>
-              )}
+                <div className="space-y-2">
+                  <Label htmlFor="email" className="text-sm font-medium">
+                    Email *
+                  </Label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                    <Input
+                      id="email"
+                      type="email"
+                      {...register('email', {
+                        required: 'Email is required',
+                        pattern: {
+                          value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+                          message: 'Invalid email address',
+                        },
+                      })}
+                      placeholder="email@example.com"
+                      className="pl-10 transition-colors focus:border-pink-500"
+                      aria-invalid={errors.email ? 'true' : 'false'}
+                    />
+                  </div>
+                  {errors.email && (
+                    <p role="alert" className="text-red-600 text-xs">
+                      {errors.email.message}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="dateTime" className="text-sm font-medium">
+                    Date & Time *
+                  </Label>
+                  <div className="relative">
+                    <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                    <Input
+                      id="dateTime"
+                      type="date"
+                      {...register('dateTime', {
+                        required: 'Date & Time is required',
+                      })}
+                      className="pl-10 transition-colors focus:border-amber-500"
+                      aria-invalid={errors.dateTime ? 'true' : 'false'}
+                    />
+                  </div>
+                  {errors.dateTime && (
+                    <p role="alert" className="text-red-600 text-xs">
+                      {errors.dateTime.message}
+                    </p>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="pt-6 border-t">
             <DialogClose asChild>
-              <Button variant="outline">Cancel</Button>
+              <Button variant="outline" disabled={isSubmitting}>
+                Cancel
+              </Button>
             </DialogClose>
-            <Button type="submit">Save changes</Button>
+            <Button
+              type="submit"
+              disabled={isSubmitting}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              {isSubmitting ? 'Adding...' : 'Add Product History'}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

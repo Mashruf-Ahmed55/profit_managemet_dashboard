@@ -95,7 +95,7 @@ interface NotificationSystemProps {
 }
 
 export default function NotificationSystem({
-  backendUrl = process.env.NEXT_BASE_URL || 'http://localhost:4000',
+  backendUrl = process.env.NEXT_BASE_URL! || 'https://greenfba.online',
   maxNotifications = 50,
   autoRemoveDelay = 5000,
 }: NotificationSystemProps) {
