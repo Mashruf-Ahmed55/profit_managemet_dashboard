@@ -559,8 +559,8 @@ const updateSingleField = async (id: string, field: string, value: string) => {
   console.log('id', id);
   console.log('Field', field);
   console.log('Value', value);
-  const res = await axios.patch(
-    `http://localhost:4000/api/product-history/${id}/update`,
+  const res = await axiosInstance.patch(
+    `/api/product-history/${id}/update`,
     {
       field,
       value,
