@@ -111,6 +111,8 @@ export default function NotificationSystem({
 
     const socket = io(backendUrl, {
       transports: ['websocket', 'polling'],
+      withCredentials: true,
+      path: '/socket.io',
       timeout: 20000,
     });
 

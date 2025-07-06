@@ -43,6 +43,8 @@ interface AddProductHistoryProps {
 interface FormInputs {
   supplierName: string;
   supplierLink: string;
+  orderId: string;
+  status: string;
   card: string;
   purchase: number;
   received: number;
@@ -212,6 +214,65 @@ const AddProductHistory: React.FC<AddProductHistoryProps> = ({
                   {errors.supplierLink && (
                     <p role="alert" className="text-red-600 text-xs">
                       {errors.supplierLink.message}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <Separator />
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                <Package className="h-4 w-4 text-green-600" />
+                Order Information
+              </div>
+
+              {/* Order ID */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="orderId" className="text-sm font-medium">
+                    Order ID *
+                  </Label>
+                  <Input
+                    id="orderId"
+                    {...register('orderId', {
+                      required: 'Order ID is required',
+                    })}
+                    placeholder="Enter order ID"
+                    className="transition-colors focus:border-green-500"
+                    aria-invalid={errors.orderId ? 'true' : 'false'}
+                  />
+                  {errors.orderId && (
+                    <p role="alert" className="text-red-600 text-xs">
+                      {errors.orderId.message}
+                    </p>
+                  )}
+                </div>
+
+                {/* Order Status */}
+                <div className="space-y-2">
+                  <Label htmlFor="orderStatus" className="text-sm font-medium">
+                    Order Status *
+                  </Label>
+                  <select
+                    id="orderStatus"
+                    {...register('status', {
+                      required: 'Order status is required',
+                    })}
+                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm transition-colors focus:outline-none focus:border-green-500"
+                  >
+                    <option value="">Select status</option>
+                    <option value="in-transit">In Transit</option>
+                    <option value="delivered">Delivered</option>
+                    <option value="return-request-sent">
+                      Return Requested
+                    </option>
+                    <option value="return-label-done">Return Label Done</option>
+                    <option value="refunded">Refunded</option>
+                  </select>
+                  {errors.status && (
+                    <p role="alert" className="text-red-600 text-xs">
+                      {errors.status.message}
                     </p>
                   )}
                 </div>
