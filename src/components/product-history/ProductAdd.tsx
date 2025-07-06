@@ -74,6 +74,8 @@ const AddProductHistory: React.FC<AddProductHistoryProps> = ({
     defaultValues: {
       purchase: 0,
       received: 0,
+      status: '',
+      orderId: '',
       lost: 0,
       sentToWfs: 0,
       costOfPrice: 0,
@@ -104,9 +106,6 @@ const AddProductHistory: React.FC<AddProductHistoryProps> = ({
     setIsSubmitting(true);
 
     try {
-      console.log('Form data:', data);
-      console.log('Product ID:', productId);
-      console.log('Store ID:', storeId);
 
       const supplierObject = {
         name: data.supplierName,
@@ -127,6 +126,8 @@ const AddProductHistory: React.FC<AddProductHistoryProps> = ({
           email: data.email,
           card: data.card,
           supplier: supplierObject,
+          orderId: orderId,
+          status: status
         },
         {
           withCredentials: true,
