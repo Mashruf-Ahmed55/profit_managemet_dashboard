@@ -1,12 +1,21 @@
 'use client';
 
+import InventorySummary from '@/components/product-history/InventorySummary';
 import { ProductHistoryTable } from '@/components/product-history/ProductHistory-table';
 import { SearchFilter } from '@/components/product-history/searchFilter';
-import { useStoresData } from '@/hooks/useStoreData';
 import axiosInstance from '@/lib/axiosInstance';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
-
+interface SummaryData {
+  totalPurchase: number;
+  totalReceive: number;
+  totalLost: number;
+  totalSendToWFS: number;
+  totalCost: number;
+  totalWFSCost: number;
+  remainingQuantity: number;
+  remainingCost: number;
+}
 // ✅ Interface kept same as before
 export interface ProductHistory {
   _id: string;
@@ -17,7 +26,7 @@ export interface ProductHistory {
   lostQuantity: number;
   sendToWFS: number;
   Remaining: number;
-  Status: string;
+  status: string;
   costOfPrice: string;
   sellPrice: string;
   email: string;
@@ -32,6 +41,7 @@ export interface ProductHistory {
   __v: number;
   product: Product;
   store: Store;
+  summary: SummaryData;
 }
 
 export interface Product {
@@ -81,15 +91,13 @@ export interface PaginationInfo {
 interface ApiResponse {
   success: boolean;
   products: ProductHistory[];
+  summary: SummaryData;
   total: number;
   page: number;
   limit: number;
   totalPages: number;
 }
 
-// Generate mock product data for demo
-
-// ✅ Updated API function with fallback mock data
 export const getProducts = async ({
   search,
   storeId,
@@ -107,7 +115,7 @@ export const getProducts = async ({
       {
         params: {
           search: search || '',
-          storeId: storeId || '',
+          storeID: storeId || '',
           page,
           limit,
         },
@@ -124,6 +132,7 @@ export const getProducts = async ({
     return {
       success: res.data.success || true,
       products: res.data.products || [],
+      summary: res.data.summary || {},
       total: res.data.total || 0,
       page: res.data.page || page,
       limit: res.data.limit || limit,
@@ -144,8 +153,6 @@ export default function InventoryPage() {
     limit: 20,
     totalPages: 0,
   });
-
-  const { data: stores } = useStoresData();
 
   // ✅ Updated query with pagination
   const { data: apiResponse, isLoading } = useQuery({
@@ -220,10 +227,17 @@ export default function InventoryPage() {
             </p>
           </div>
         </div>
+        <div className="">
+          <InventorySummary
+            summary={apiResponse?.summary}
+            handleStoreChange={handleStoreChange}
+          />
+        </div>
 
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
           {/* 🔍 Search Filter */}
           <SearchFilter search={search} onSearchChange={handleSearchChange} />
+          {/* <UploadDialog  /> */}
         </div>
 
         {/* 📦 Product History Table with Pagination */}

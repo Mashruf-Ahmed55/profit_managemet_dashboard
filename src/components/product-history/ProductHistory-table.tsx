@@ -1,7 +1,5 @@
 'use client';
 
-import type React from 'react';
-
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -34,31 +32,40 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import axiosInstance from '@/lib/axiosInstance';
 import { cn } from '@/lib/utils';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import axios from 'axios';
 import {
   ArrowUpDown,
+  BadgeX,
   Calendar,
+  CheckCircle2,
   ChevronLeft,
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
+  CornerDownLeft,
   CreditCard,
   DollarSign,
   Edit2,
   Hash,
+  HelpCircle,
   Mail,
   Minus,
   Package,
   Plus,
+  RotateCcw,
   Save,
   StoreIcon,
+  Trash,
   TrendingDown,
   TrendingUp,
+  Truck,
   X,
 } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import type React from 'react';
+import { JSX, useEffect, useRef, useState } from 'react';
+import { HiOutlineBadgeCheck } from 'react-icons/hi';
 import AddProductHistory from './ProductAdd';
 
 // Types
@@ -72,7 +79,7 @@ export interface ProductHistory {
   lostQuantity: number;
   sendToWFS: number;
   Remaining: number;
-  Status: string;
+  status: string;
   costOfPrice: string;
   sellPrice: string;
   email: string;
@@ -213,6 +220,83 @@ function EditPopover({
             className="h-9"
             placeholder={`Enter ${label.toLowerCase()}`}
           />
+          <div className="flex gap-2 justify-end">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleCancel}
+              className="h-8"
+            >
+              <X className="h-3 w-3 mr-1" />
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              size="sm"
+              onClick={handleSave}
+              className="h-8"
+            >
+              <Save className="h-3 w-3 mr-1" />
+              Save
+            </Button>
+          </div>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function EditPopoverSelect({
+  value,
+  onSave,
+  type = 'text',
+  label,
+  icon,
+}: EditPopoverProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [editValue, setEditValue] = useState(String(value || ''));
+  const handleSave = () => {
+    onSave(editValue);
+    setIsOpen(false);
+  };
+
+  const handleCancel = () => {
+    setEditValue(String(value || ''));
+    setIsOpen(false);
+  };
+
+  return (
+    <Popover open={isOpen} onOpenChange={setIsOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+        >
+          <Edit2 className="h-3 w-3" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-80 p-4" align="start">
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            {icon}
+            <Label className="text-sm font-medium">{label}</Label>
+          </div>
+          <Select onValueChange={setEditValue} defaultValue={editValue}>
+            <SelectTrigger className="h-9 w-72 shadow-none">
+              <SelectValue placeholder="" />
+            </SelectTrigger>
+
+            <SelectContent>
+              <SelectItem value="in-transit">In Transit</SelectItem>
+              <SelectItem value="delivered">Delivered</SelectItem>
+              <SelectItem value="return-label-done">Return Label</SelectItem>
+              <SelectItem value="refunded">Refunded</SelectItem>
+              <SelectItem value="return-request-sent">
+                Return Request Sent
+              </SelectItem>
+            </SelectContent>
+          </Select>
           <div className="flex gap-2 justify-end">
             <Button
               variant="outline"
@@ -474,10 +558,19 @@ const updateSingleField = async (id: string, field: string, value: string) => {
   console.log('id', id);
   console.log('Field', field);
   console.log('Value', value);
-  const res = await axiosInstance.patch(`/api/product-history/${id}/update`, {
-    field,
-    value,
-  });
+  const res = await axios.patch(
+    `http://localhost:4000/api/product-history/${id}/update`,
+    {
+      field,
+      value,
+    }
+  );
+  return res.data;
+};
+const deleteProduct = async (id: string) => {
+  const res = await axios.delete(
+    `http://localhost:4000/api/product-history/${id}`
+  );
   return res.data;
 };
 
@@ -519,6 +612,20 @@ export function ProductHistoryTable({
     },
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await deleteProduct(id);
+      return { id };
+    },
+    onSuccess: (data) => {
+      console.log('Product deleted successfully:', data);
+      client.invalidateQueries({ queryKey: ['productsHistory'] });
+    },
+    onError: (error) => {
+      console.error('Error deleting product:', error);
+    },
+  });
+
   const handleFieldUpdate = (
     productId: string,
     field: string,
@@ -533,6 +640,51 @@ export function ProductHistoryTable({
       field,
       value,
     });
+  };
+
+  const getStatusInfo = (status: string) => {
+    const map: Record<
+      string,
+      {
+        label: string;
+        color: string;
+        icon: JSX.Element;
+      }
+    > = {
+      'in-transit': {
+        label: 'In Transit',
+        color: 'bg-primary text-primary-foreground capitalize',
+        icon: <Truck className="w-4 h-4" />,
+      },
+      delivered: {
+        label: 'Delivered',
+        color: 'bg-secondary text-secondary-foreground',
+        icon: <CheckCircle2 className="w-4 h-4" />,
+      },
+      'return-label-done': {
+        label: 'Return Label Done',
+        color: 'bg-destructive text-destructive-foreground',
+        icon: <RotateCcw className="w-4 h-4" />,
+      },
+      refunded: {
+        label: 'Refunded',
+        color: 'bg-destructive text-destructive-foreground',
+        icon: <CornerDownLeft className="w-4 h-4" />,
+      },
+      'return-request-sent': {
+        label: 'Return Requested Sent',
+        color: 'bg-destructive text-destructive-foreground',
+        icon: <BadgeX className="w-4 h-4" />,
+      },
+    };
+
+    return (
+      map[status] || {
+        label: status,
+        color: 'bg-muted text-muted-foreground',
+        icon: <HelpCircle className="w-4 h-4" />,
+      }
+    );
   };
 
   useEffect(() => {
@@ -564,8 +716,8 @@ export function ProductHistoryTable({
         <CardHeader className="pb-4 border-b bg-gradient-to-r from-slate-50 to-gray-50">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <Package className="h-5 w-5 text-blue-600" />
+              <div className="p-2 rounded-lg">
+                <Skeleton className="h-5 w-5" />
               </div>
               <div>
                 <Skeleton className="h-6 w-48 mb-1" />
@@ -601,6 +753,7 @@ export function ProductHistoryTable({
                     'WFS Cost',
                     'Remaining Price',
                     'Email',
+                    'Status',
                     'Date & Time',
                     'Actions',
                   ].map((title, index) => (
@@ -770,6 +923,12 @@ export function ProductHistoryTable({
                     Email
                   </div>
                 </TableHead>
+                <TableHead className="font-semibold min-w-[200px] text-slate-700">
+                  <div className="flex items-center gap-2">
+                    <HiOutlineBadgeCheck className="h-4 w-4 text-blue-600" />
+                    Status
+                  </div>
+                </TableHead>
                 <TableHead className="font-semibold min-w-[160px] text-slate-700">
                   <div className="flex items-center gap-2">
                     <Calendar className="h-4 w-4 text-amber-600" />
@@ -783,7 +942,7 @@ export function ProductHistoryTable({
             </TableHeader>
             <TableBody>
               {products.map((product: ProductHistory, index) => {
-                const { formattedDate, time } = formatDate(product.date);
+                const { formattedDate } = formatDate(product.date);
                 const isHovered = hoveredRow === product._id;
                 const remaining = product.receiveQuantity - product.sendToWFS;
                 const totalCost =
@@ -1117,6 +1276,51 @@ export function ProductHistoryTable({
                       </div>
                     </TableCell>
 
+                    {/* Status */}
+                    <TableCell className="py-6">
+                      <div className="flex items-center gap-2 group/email">
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              {/* Get status info for color + icon */}
+                              {(() => {
+                                const statusInfo = getStatusInfo(
+                                  product.status || 'no-status'
+                                );
+
+                                return (
+                                  <span
+                                    className={`text-sm truncate max-w-[160px] px-2 py-1 rounded-md flex items-center gap-1 ${statusInfo.color}`}
+                                    title={product.status}
+                                  >
+                                    {statusInfo.icon}
+                                    {statusInfo.label}
+                                  </span>
+                                );
+                              })()}
+                            </TooltipTrigger>
+                            <TooltipContent
+                              side="top"
+                              className="bg-slate-800 text-white"
+                            >
+                              <p className="text-sm">
+                                {product.email || 'No Email'}
+                              </p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+
+                        <EditPopoverSelect
+                          value={product.status}
+                          onSave={(value: string) =>
+                            handleFieldUpdate(product._id, 'status', value)
+                          }
+                          type="text"
+                          label="Status"
+                          icon={<HiOutlineBadgeCheck className="h-4 w-4" />}
+                        />
+                      </div>
+                    </TableCell>
                     {/* Date */}
                     <TableCell className="py-6">
                       <div className="flex items-center gap-2 group/date">
@@ -1124,7 +1328,6 @@ export function ProductHistoryTable({
                           <div className="font-semibold text-amber-800">
                             {formattedDate}
                           </div>
-                          <div className="text-xs text-amber-600">{time}</div>
                         </div>
                         <EditPopover
                           value={product.date.split('T')[0]}
@@ -1155,6 +1358,14 @@ export function ProductHistoryTable({
                           storeId={product.store._id}
                         />
                       </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-8 w-8 p-0 hover:bg-red-50 hover:border-red-200 transition-colors bg-transparent"
+                        onClick={() => deleteMutation.mutate(product._id)}
+                      >
+                        <Trash className="h-4 w-4 text-red-600" />
+                      </Button>
                     </TableCell>
                   </TableRow>
                 );
