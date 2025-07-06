@@ -1,8 +1,8 @@
 'use client';
 
 import { useFileUpload } from '@/hooks/use-file-upload';
+import axiosInstance from '@/lib/axiosInstance';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import axios from 'axios';
 import {
   Building,
   CheckCircle,
@@ -25,7 +25,6 @@ import {
 } from './ui/card';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
-import axiosInstance from '@/lib/axiosInstance';
 
 interface NewStoreFormValues {
   storeId: string;

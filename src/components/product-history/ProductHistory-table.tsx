@@ -35,7 +35,6 @@ import {
 import axiosInstance from '@/lib/axiosInstance';
 import { cn } from '@/lib/utils';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import axios from 'axios';
 import {
   ArrowUpDown,
   BadgeX,
@@ -66,7 +65,18 @@ import {
 } from 'lucide-react';
 import type React from 'react';
 import { JSX, useEffect, useRef, useState } from 'react';
+import { FiLoader } from 'react-icons/fi';
 import { HiOutlineBadgeCheck } from 'react-icons/hi';
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '../ui/dialog';
 import AddProductHistory from './ProductAdd';
 
 // Types
@@ -559,13 +569,10 @@ const updateSingleField = async (id: string, field: string, value: string) => {
   console.log('id', id);
   console.log('Field', field);
   console.log('Value', value);
-  const res = await axiosInstance.patch(
-    `/api/product-history/${id}/update`,
-    {
-      field,
-      value,
-    }
-  );
+  const res = await axiosInstance.patch(`/api/product-history/${id}/update`, {
+    field,
+    value,
+  });
   return res.data;
 };
 const deleteProduct = async (id: string) => {
@@ -1358,14 +1365,54 @@ export function ProductHistoryTable({
                           }
                           storeId={product.store._id}
                         />
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-8 w-8 p-0 hover:bg-red-50 hover:border-red-200 transition-colors bg-transparent"
-                          onClick={() => deleteMutation.mutate(product._id)}
-                        >
-                          <Trash className="h-4 w-4 text-red-600" />
-                        </Button>
+                        <Dialog>
+                          <form>
+                            <DialogTrigger asChild>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-8 w-8 p-0 hover:bg-red-50 hover:border-red-200 transition-colors bg-transparent"
+                              >
+                                <Trash className="h-4 w-4 text-red-600" />
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent className="sm:max-w-[425px]">
+                              <DialogHeader>
+                                <DialogTitle>
+                                  Delete Product History
+                                </DialogTitle>
+                                <DialogDescription>
+                                  Are you sure you want to delete this product
+                                  history? This action cannot be undone.
+                                </DialogDescription>
+                              </DialogHeader>
+
+                              <DialogFooter>
+                                <DialogClose asChild>
+                                  <Button type="submit">Cancel</Button>
+                                </DialogClose>
+                                <Button
+                                  size={
+                                    deleteMutation.isPending
+                                      ? 'icon'
+                                      : 'default'
+                                  }
+                                  onClick={() =>
+                                    deleteMutation.mutate(product._id)
+                                  }
+                                  disabled={deleteMutation.isPending}
+                                  variant="destructive"
+                                >
+                                  {deleteMutation.isPending ? (
+                                    <FiLoader className="mr-2 h-4 w-4 animate-spin" />
+                                  ) : (
+                                    'Delete'
+                                  )}
+                                </Button>
+                              </DialogFooter>
+                            </DialogContent>
+                          </form>
+                        </Dialog>
                       </div>
                     </TableCell>
                   </TableRow>

@@ -48,7 +48,6 @@ import {
 } from '@/components/ui/table';
 import axiosInstance from '@/lib/axiosInstance';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import axios from 'axios';
 import {
   CheckCircle,
   Crown,
@@ -93,9 +92,7 @@ export default function UsersListPage() {
   } = useQuery({
     queryKey: ['users'],
     queryFn: async (): Promise<UserData[]> => {
-      const response = await axiosInstance.get(
-        '/api/users/all-user'
-      );
+      const response = await axiosInstance.get('/api/users/all-user');
       return response.data.users;
     },
   });
@@ -116,7 +113,7 @@ export default function UsersListPage() {
   const confirmDelete = async () => {
     if (!deleteUser) return;
     try {
-      await axiosInstance.delete(`/api/users/${deleteUser._id}`);
+      await axiosInstance.delete(`/api/users/delete-user/${deleteUser._id}`);
       queryClient.invalidateQueries({ queryKey: ['users'] });
       setDeleteUser(null);
       toast.success('User deleted successfully');
