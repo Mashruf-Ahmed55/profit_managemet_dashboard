@@ -32,6 +32,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import axiosInstance from '@/lib/axiosInstance';
 import { cn } from '@/lib/utils';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
@@ -568,8 +569,8 @@ const updateSingleField = async (id: string, field: string, value: string) => {
   return res.data;
 };
 const deleteProduct = async (id: string) => {
-  const res = await axios.delete(
-    `http://localhost:4000/api/product-history/${id}`
+  const res = await axiosInstance.delete(
+    `/api/product-history/delete-product-history/${id}`
   );
   return res.data;
 };
@@ -1357,15 +1358,15 @@ export function ProductHistoryTable({
                           }
                           storeId={product.store._id}
                         />
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-8 w-8 p-0 hover:bg-red-50 hover:border-red-200 transition-colors bg-transparent"
+                          onClick={() => deleteMutation.mutate(product._id)}
+                        >
+                          <Trash className="h-4 w-4 text-red-600" />
+                        </Button>
                       </div>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-8 w-8 p-0 hover:bg-red-50 hover:border-red-200 transition-colors bg-transparent"
-                        onClick={() => deleteMutation.mutate(product._id)}
-                      >
-                        <Trash className="h-4 w-4 text-red-600" />
-                      </Button>
                     </TableCell>
                   </TableRow>
                 );
