@@ -13,15 +13,6 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -39,9 +30,6 @@ import {
   CheckCircle,
   Clock,
   Crown,
-  Eye,
-  EyeOff,
-  Key,
   Mail,
   Phone,
   Save,
@@ -644,7 +632,7 @@ export default function UserPageEdit({
             </Card>
           </div>
           {/* Security Section */}
-          <Card className="mt-6">
+          {/* <Card className="mt-6">
             <CardHeader>
               <CardTitle className="flex items-center">
                 <Key className="h-5 w-5 mr-2" />
@@ -794,7 +782,7 @@ export default function UserPageEdit({
                 </Dialog>
               </div>
             </CardContent>
-          </Card>
+          </Card> */}
 
           {/* Action Buttons */}
           <div className="flex justify-end space-x-4 mt-8">
@@ -804,6 +792,7 @@ export default function UserPageEdit({
               onClick={onBack}
               disabled={isSubmitting}
             >
+              
               <X className="h-4 w-4 mr-2" />
               Cancel
             </Button>

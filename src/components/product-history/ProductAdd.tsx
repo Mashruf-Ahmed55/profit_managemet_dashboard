@@ -106,7 +106,6 @@ const AddProductHistory: React.FC<AddProductHistoryProps> = ({
     setIsSubmitting(true);
 
     try {
-
       const supplierObject = {
         name: data.supplierName,
         link: data.supplierLink,
@@ -126,8 +125,8 @@ const AddProductHistory: React.FC<AddProductHistoryProps> = ({
           email: data.email,
           card: data.card,
           supplier: supplierObject,
-          orderId: orderId,
-          status: status
+          orderId: data.orderId,
+          status: data.status,
         },
         {
           withCredentials: true,

@@ -1,7 +1,6 @@
 'use client';
 
 import StorePageAdd from '@/components/add-store-page';
-import StorePageEdit from '@/components/edit-store-page';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -32,6 +31,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import {
+  Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
@@ -46,12 +46,12 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { useStoresData } from '@/hooks/useStoreData';
-import { Select } from '@radix-ui/react-select';
+import axiosInstance from '@/lib/axiosInstance';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   CheckCircle,
   Clock,
   Copy,
-  Edit,
   Filter,
   MoreHorizontal,
   Plus,
@@ -60,76 +60,31 @@ import {
   Trash2,
   XCircle,
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
-
-interface StoreData {
-  storeId: string;
-  storeName: string;
-  storeEmail: string;
-  storeClientId: string;
-  storeClientSecret: string;
-  storeStatus: 'active' | 'inactive' | 'pending';
-  storeImage: string;
-  storeDescription?: string;
-  storeAddress?: string;
-  storePhone?: string;
-  createdAt: string;
-}
+import { useMemo, useState } from 'react';
+import toast from 'react-hot-toast';
 
 export default function StoresListPage() {
   const { data: stores = [], isLoading, isError } = useStoresData();
-
-  const [localStores, setLocalStores] = useState<StoreData[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [deleteStore, setDeleteStore] = useState<StoreData | null>(null);
-  const [currentPage, setCurrentPage] = useState<'list' | 'add' | 'edit'>(
-    'list'
-  );
-  const [editingStore, setEditingStore] = useState<StoreData | null>(null);
+  const [deleteStore, setDeleteStore] = useState<string>('');
+  const [currentPage, setCurrentPage] = useState<'list' | 'add'>('list');
 
-  // Populate localStores when data changes
-  useEffect(() => {
-    setLocalStores(
-      stores.map((store: any) => ({
-        storeId: store.storeId,
-        storeName: store.storeName,
-        storeEmail: store.storeEmail,
-        storeClientId: store.storeClientId,
-        storeClientSecret: store.storeClientSecret,
-        storeStatus: store.storeStatus,
-        storeImage: store.storeImage,
-        storeDescription: store.storeDescription ?? '',
-        storeAddress: store.storeAddress ?? '',
-        storePhone: store.storePhone ?? '',
-        createdAt: store.createdAt ?? new Date().toISOString(),
-      }))
-    );
-  }, [stores]);
+  const queryClient = useQueryClient();
 
-  // Loading & Error states
-  if (isLoading)
-    return (
-      <div className="p-10 text-center text-gray-600">Loading stores...</div>
-    );
-  if (isError)
-    return (
-      <div className="p-10 text-center text-red-600">
-        Failed to load stores. Please try again later.
-      </div>
-    );
+  const filteredStores = useMemo(() => {
+    return stores.filter((store) => {
+      const matchSearch =
+        store.storeName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        store.storeEmail.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        store.storeId.toLowerCase().includes(searchTerm.toLowerCase());
 
-  const filteredStores = localStores.filter((store) => {
-    const matchesSearch =
-      store.storeName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      store.storeEmail.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      store.storeId.includes(searchTerm);
+      const matchStatus =
+        statusFilter === 'all' || store.storeStatus === statusFilter;
 
-    const matchesStatus =
-      statusFilter === 'all' || store.storeStatus === statusFilter;
-
-    return matchesSearch && matchesStatus;
-  });
+      return matchSearch && matchStatus;
+    });
+  }, [stores, searchTerm, statusFilter]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -157,32 +112,31 @@ export default function StoresListPage() {
     }
   };
 
-  const handleDeleteStore = (store: StoreData) => {
+  const handleDeleteStore = (store: string) => {
     setDeleteStore(store);
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (deleteStore) {
-      setLocalStores(
-        localStores.filter((store) => store.storeId !== deleteStore.storeId)
-      );
-      setDeleteStore(null);
+      try {
+        await axiosInstance.delete(`/api/stores/store-delete/${deleteStore}`);
+        toast.success('Store deleted successfully');
+        queryClient.invalidateQueries({ queryKey: ['stores'] });
+      } catch {
+        toast.error('Failed to delete store');
+      } finally {
+        setDeleteStore('');
+      }
     }
   };
 
-  const handleEditStore = (store: StoreData) => {
-    setEditingStore(store);
-    setCurrentPage('edit');
-  };
-
   const handleAddStore = () => {
-    setEditingStore(null);
     setCurrentPage('add');
   };
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
-    // Add toast notification here if you want
+    toast.success('Copied!');
   };
 
   const getInitials = (name: string) => {
@@ -193,33 +147,22 @@ export default function StoresListPage() {
       .toUpperCase();
   };
 
-  if (currentPage === 'add') {
+  if (isLoading) {
     return (
-      <AddStorePage
-        onBack={() => setCurrentPage('list')}
-        onStoreAdded={(store) => {
-          setLocalStores([...localStores, store]);
-          setCurrentPage('list');
-        }}
-      />
+      <div className="p-10 text-center text-gray-600">Loading stores...</div>
     );
   }
 
-  if (currentPage === 'edit' && editingStore) {
+  if (isError) {
     return (
-      <EditStorePage
-        store={editingStore}
-        onBack={() => setCurrentPage('list')}
-        onStoreUpdated={(updatedStore) => {
-          setLocalStores(
-            localStores.map((store) =>
-              store.storeId === updatedStore.storeId ? updatedStore : store
-            )
-          );
-          setCurrentPage('list');
-        }}
-      />
+      <div className="p-10 text-center text-red-600">
+        Failed to load stores.
+      </div>
     );
+  }
+
+  if (currentPage === 'add') {
+    return <AddStorePage onBack={() => setCurrentPage('list')} />;
   }
 
   return (
@@ -238,10 +181,9 @@ export default function StoresListPage() {
               </p>
             </div>
           </div>
-
           <Button
             onClick={handleAddStore}
-            className="bg-blue-600 hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 text-white flex items-center gap-2 px-5 py-2 rounded-md shadow-md transition"
+            className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2 px-5 py-2 rounded-md shadow-md transition"
           >
             <Plus className="h-5 w-5" />
             Add New Store
@@ -253,36 +195,23 @@ export default function StoresListPage() {
           {[
             {
               label: 'Total Stores',
-              value: localStores.length,
+              value: stores.length,
               icon: <Store className="h-6 w-6 text-blue-600" />,
               bg: 'bg-blue-100',
-              text: 'text-blue-600',
             },
             {
               label: 'Active',
-              value: localStores.filter((s) => s.storeStatus === 'active')
-                .length,
+              value: stores.filter((s) => s.storeStatus === 'active').length,
               icon: <CheckCircle className="h-6 w-6 text-green-600" />,
               bg: 'bg-green-100',
-              text: 'text-green-600',
-            },
-            {
-              label: 'Pending',
-              value: localStores.filter((s) => s.storeStatus === 'pending')
-                .length,
-              icon: <Clock className="h-6 w-6 text-yellow-600" />,
-              bg: 'bg-yellow-100',
-              text: 'text-yellow-600',
             },
             {
               label: 'Inactive',
-              value: localStores.filter((s) => s.storeStatus === 'inactive')
-                .length,
+              value: stores.filter((s) => s.storeStatus === 'inactive').length,
               icon: <XCircle className="h-6 w-6 text-red-600" />,
               bg: 'bg-red-100',
-              text: 'text-red-600',
             },
-          ].map(({ label, value, icon, bg, text }) => (
+          ].map(({ label, value, icon, bg }) => (
             <Card key={label} className="shadow-sm rounded-lg">
               <CardContent className="p-5 flex items-center gap-4">
                 <div className={`p-3 rounded-md ${bg}`}>{icon}</div>
@@ -323,7 +252,7 @@ export default function StoresListPage() {
           </Select>
         </div>
 
-        {/* Stores Table */}
+        {/* Table */}
         <Card className="shadow-none rounded-lg border border-gray-200">
           <CardHeader className="border-b border-gray-200">
             <CardTitle className="text-xl font-semibold">
@@ -337,61 +266,37 @@ export default function StoresListPage() {
             <Table className="min-w-full">
               <TableHeader className="bg-gray-50">
                 <TableRow>
-                  <TableHead className="py-3 px-6 text-left text-gray-700">
-                    Store
-                  </TableHead>
-                  <TableHead className="py-3 px-6 text-left text-gray-700">
-                    Store ID
-                  </TableHead>
-                  <TableHead className="py-3 px-6 text-left text-gray-700">
-                    Email
-                  </TableHead>
-                  <TableHead className="py-3 px-6 text-left text-gray-700">
-                    Status
-                  </TableHead>
-                  <TableHead className="py-3 px-6 text-left text-gray-700">
-                    Created
-                  </TableHead>
-                  <TableHead className="py-3 px-6 text-left text-gray-700">
-                    Actions
-                  </TableHead>
+                  <TableHead>Store</TableHead>
+                  <TableHead>Store ID</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Status</TableHead>
+
+                  <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredStores.map((store) => (
-                  <TableRow
-                    key={store.storeId}
-                    className="hover:bg-gray-50 transition-colors"
-                  >
+                  <TableRow key={store.storeId}>
                     <TableCell className="flex items-center gap-4 py-3 px-6">
-                      <Avatar className="h-10 w-10 rounded-full ring-1 ring-gray-300 overflow-hidden">
+                      <Avatar className="h-10 w-10 ring-1 ring-gray-300">
                         <AvatarImage
                           src={store.storeImage || '/placeholder.svg'}
-                          alt={store.storeName}
                         />
-                        <AvatarFallback className="text-gray-500">
+                        <AvatarFallback>
                           {getInitials(store.storeName)}
                         </AvatarFallback>
                       </Avatar>
-                      <div>
-                        <p className="font-semibold text-gray-900">
-                          {store.storeName}
-                        </p>
-                        <p className="text-sm text-gray-500 truncate max-w-xs">
-                          {store.storeDescription || 'No description'}
-                        </p>
-                      </div>
+                      {store.storeName}
                     </TableCell>
-                    <TableCell className="py-3 px-6 whitespace-nowrap">
+                    <TableCell className="py-3 px-6">
                       <div className="flex items-center gap-2">
-                        <code className="bg-gray-100 px-2 py-1 rounded text-sm text-gray-700">
+                        <code className="bg-gray-100 px-2 py-1 rounded text-sm">
                           {store.storeId}
                         </code>
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => copyToClipboard(store.storeId)}
-                          aria-label="Copy Store ID"
                         >
                           <Copy className="h-4 w-4" />
                         </Button>
@@ -402,16 +307,15 @@ export default function StoresListPage() {
                     </TableCell>
                     <TableCell className="py-3 px-6">
                       <Badge
-                        className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-sm font-medium ${getStatusColor(
+                        className={`inline-flex items-center gap-1 px-3 py-1 text-sm ${getStatusColor(
                           store.storeStatus
                         )}`}
                       >
                         {getStatusIcon(store.storeStatus)}
-                        <span className="capitalize">{store.storeStatus}</span>
+                        <span className="capitalize ml-1">
+                          {store.storeStatus}
+                        </span>
                       </Badge>
-                    </TableCell>
-                    <TableCell className="py-3 px-6 whitespace-nowrap">
-                      {new Date(store.createdAt).toLocaleDateString()}
                     </TableCell>
                     <TableCell className="py-3 px-6">
                       <DropdownMenu>
@@ -420,7 +324,6 @@ export default function StoresListPage() {
                             variant="ghost"
                             size="sm"
                             className="p-1 rounded-full"
-                            aria-label="Open actions"
                           >
                             <MoreHorizontal className="h-5 w-5" />
                           </Button>
@@ -436,14 +339,7 @@ export default function StoresListPage() {
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
-                            onClick={() => handleEditStore(store)}
-                            className="flex items-center gap-2"
-                          >
-                            <Edit className="h-4 w-4" />
-                            Edit Store
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => handleDeleteStore(store)}
+                            onClick={() => handleDeleteStore(store._id)}
                             className="flex items-center gap-2 text-red-600"
                           >
                             <Trash2 className="h-4 w-4" />
@@ -471,7 +367,7 @@ export default function StoresListPage() {
                 {!searchTerm && statusFilter === 'all' && (
                   <Button
                     onClick={handleAddStore}
-                    className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
+                    className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white"
                   >
                     <Plus className="h-5 w-5" />
                     Add Your First Store
@@ -485,29 +381,20 @@ export default function StoresListPage() {
         {/* Delete Confirmation Dialog */}
         <AlertDialog
           open={!!deleteStore}
-          onOpenChange={() => setDeleteStore(null)}
+          onOpenChange={() => setDeleteStore('')}
         >
           <AlertDialogContent className="max-w-md rounded-lg shadow-lg">
             <AlertDialogHeader>
-              <AlertDialogTitle className="text-lg font-semibold">
-                Delete Store
-              </AlertDialogTitle>
+              <AlertDialogTitle>Delete Store</AlertDialogTitle>
               <AlertDialogDescription>
-                Are you sure you want to delete{' '}
-                <span className="font-semibold">
-                  "{deleteStore?.storeName}"
-                </span>
-                ? This action cannot be undone. All associated data will be
-                permanently removed.
+                Are you sure you want to delete ? This action cannot be undone.
               </AlertDialogDescription>
             </AlertDialogHeader>
-            <AlertDialogFooter className="space-x-4">
-              <AlertDialogCancel className="px-4 py-2 rounded-md hover:bg-gray-100">
-                Cancel
-              </AlertDialogCancel>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
               <AlertDialogAction
                 onClick={confirmDelete}
-                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:ring-2 focus:ring-red-500"
+                className="bg-red-600 text-white hover:bg-red-700"
               >
                 Delete Store
               </AlertDialogAction>
@@ -519,13 +406,7 @@ export default function StoresListPage() {
   );
 }
 
-function AddStorePage({
-  onBack,
-  onStoreAdded,
-}: {
-  onBack: () => void;
-  onStoreAdded: (store: StoreData) => void;
-}) {
+function AddStorePage({ onBack }: { onBack: () => void }) {
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4">
       <div className="max-w-4xl mx-auto">
@@ -533,28 +414,6 @@ function AddStorePage({
           ← Back to Stores
         </Button>
         <StorePageAdd />
-      </div>
-    </div>
-  );
-}
-
-function EditStorePage({
-  store,
-  onBack,
-  onStoreUpdated,
-}: {
-  store: StoreData;
-  onBack: () => void;
-  onStoreUpdated: (store: StoreData) => void;
-}) {
-  return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4">
-      <div className="max-w-4xl mx-auto">
-        <StorePageEdit
-          store={store}
-          onBack={onBack}
-          onStoreUpdated={onStoreUpdated}
-        />
       </div>
     </div>
   );

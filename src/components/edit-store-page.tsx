@@ -38,6 +38,8 @@ import {
   X,
 } from 'lucide-react';
 import { useState } from 'react';
+import axios from 'axios';
+import axiosInstance from '@/lib/axiosInstance';
 
 interface StoreData {
   storeId: string;
@@ -177,11 +179,7 @@ export default function StorePageEdit({
     setSubmitStatus('idle');
 
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-
-      // Here you would typically send the data to your API
-      console.log('Updated store data:', formData);
+      // axiosInstance.put('/', formData);
 
       setSubmitStatus('success');
 
