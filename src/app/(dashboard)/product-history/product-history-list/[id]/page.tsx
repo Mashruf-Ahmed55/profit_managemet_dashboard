@@ -12,7 +12,6 @@ import {
 } from '@/components/ui/table';
 import axiosInstance from '@/lib/axiosInstance';
 import { useQuery } from '@tanstack/react-query';
-import axios from 'axios';
 import {
   Barcode,
   CalendarDays,
@@ -25,77 +24,37 @@ import {
 import { useParams } from 'next/navigation';
 
 // Sample data based on the provided JSON structure
-const productData = {
-  data: {
-    _id: '6858e20b6ae11ee0485ae968',
-    mart: 'WALMART_US',
-    sku: '0810026290435',
-    condition: 'New',
-    availability: 'Out_of_stock',
-    wpid: '57O4B4YA3PCO',
-    upc: '810026290435',
-    gtin: '00810026290435',
-    productName: "BEVEL Men's Shave Starter Kit",
-    productType: 'Shaving Sets',
-    onHand: 0,
-    available: 0,
-    publishedStatus: 'PUBLISHED',
-    lifecycleStatus: 'ACTIVE',
-    __v: 0,
-    createdAt: '2025-06-23T05:11:39.919Z',
-    updatedAt: '2025-06-23T05:11:39.919Z',
-    id: '6858e20b6ae11ee0485ae968',
-    history: [
-      {
-        _id: '6858e20c6ae11ee0485aea00',
-        productId: '6858e20b6ae11ee0485ae968',
-        storeID: '68332d0499750d4f5f46a0c9',
-        quantity: 100,
-        costOfPrice: 0,
-        sellPrice: 64.99,
-        email: '',
-        card: '5555',
-        supplier: '',
-        totalPrice: '0',
-        date: '2025-06-23T05:11:40.063Z',
-        __v: 0,
-      },
-      {
-        _id: '68594eb3f91a1bfbbf28f701',
-        productId: '6858e20b6ae11ee0485ae968',
-        storeID: '68332d0499750d4f5f46a0c9',
-        quantity: 11,
-        costOfPrice: 5657,
-        sellPrice: 65768,
-        date: '2025-06-23T12:47:00.000Z',
-        email: 'mahinmejan2@gmail.com',
-        card: '5555',
-        supplier: 'hello',
-        totalPrice: '0',
-        __v: 0,
-      },
-    ],
-  },
-  success: true,
-};
-export interface ProductHistoryItem {
+export interface Supplier {
+  name: string;
+  link: string;
+  _id: string;
+}
+
+export interface HistoryEntry {
   _id: string;
   productId: string;
   storeID: string;
-  quantity: number;
+  orderId: string;
+  purchaseQuantity: number;
+  receiveQuantity: number;
+  lostQuantity: number;
+  sendToWFS: number;
+  status: string;
+  upc: string;
   costOfPrice: number;
   sellPrice: number;
   email: string;
   card: string;
-  supplier: string;
+  supplier: Supplier;
   totalPrice: string;
   date: string; // ISO date string
   __v: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
-export interface ProductWithHistory {
+export interface Product {
   _id: string;
-  id: string; // same as _id, possibly for frontend convenience
   mart: string;
   sku: string;
   condition: string;
@@ -110,16 +69,17 @@ export interface ProductWithHistory {
   publishedStatus: string;
   lifecycleStatus: string;
   __v: number;
-  createdAt: string; // ISO date string
-  updatedAt: string; // ISO date string
-  history: ProductHistoryItem[];
+  createdAt: string;
+  updatedAt: string;
+  id: string;
+  history: HistoryEntry[];
 }
 
 export default function ProductDetailsPage() {
   const { id } = useParams();
   const { data: product } = useQuery({
     queryKey: ['productsHistoryList', id],
-    queryFn: async (): Promise<ProductWithHistory> => {
+    queryFn: async (): Promise<Product> => {
       const res = await axiosInstance.get(
         `/api/product-history/get-product-history-list/${id}`
       );
@@ -397,9 +357,12 @@ export default function ProductDetailsPage() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline" className="font-mono">
-                          {record.quantity}
-                        </Badge>
+                        <div className="flex flex-col gap-1 text-xs">
+                          <div>Purchase: {record.purchaseQuantity}</div>
+                          <div>Received: {record.receiveQuantity}</div>
+                          <div>Lost: {record.lostQuantity}</div>
+                          <div>Sent to WFS: {record.sendToWFS}</div>
+                        </div>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
@@ -432,7 +395,20 @@ export default function ProductDetailsPage() {
                         <div className="flex items-center gap-1">
                           <CreditCard className="w-4 h-4 text-slate-500" />
                           <span className="font-mono text-sm">
-                            {record.card ? `****${record.card}` : 'N/A'}
+                            {record.supplier?.name ? (
+                              <a
+                                href={record.supplier.link}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-600 underline"
+                              >
+                                {record.supplier.name}
+                              </a>
+                            ) : (
+                              <span className="text-slate-400 italic">
+                                Not specified
+                              </span>
+                            )}
                           </span>
                         </div>
                       </TableCell>
