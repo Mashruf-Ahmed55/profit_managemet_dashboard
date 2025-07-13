@@ -3,6 +3,7 @@
 import InventorySummary from '@/components/product-history/InventorySummary';
 import { ProductHistoryTable } from '@/components/product-history/ProductHistory-table';
 import { SearchFilter } from '@/components/product-history/searchFilter';
+import { UploadDialog } from '@/components/product-history/UploadDialog';
 import axiosInstance from '@/lib/axiosInstance';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
@@ -237,7 +238,7 @@ export default function InventoryPage() {
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
           {/* 🔍 Search Filter */}
           <SearchFilter search={search} onSearchChange={handleSearchChange} />
-          {/* <UploadDialog  /> */}
+          <UploadDialog  />
         </div>
 
         {/* 📦 Product History Table with Pagination */}

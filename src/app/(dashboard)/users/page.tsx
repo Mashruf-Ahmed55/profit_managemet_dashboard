@@ -96,6 +96,7 @@ export default function UsersListPage() {
       return response.data.users;
     },
   });
+  console.log(users);
 
   const [deleteUser, setDeleteUser] = useState<UserData | null>(null);
   const [currentPage, setCurrentPage] = useState<'list' | 'add' | 'edit'>(

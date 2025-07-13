@@ -27,7 +27,7 @@ import {
 
 import { useStoresData } from '@/hooks/useStoreData';
 
-import axiosInstance from '@/lib/axiosInstance';
+import axios from 'axios';
 import {
   AlertCircle,
   CheckCircle2,
@@ -45,6 +45,10 @@ interface FormValues {
 export function UploadDialog() {
   const { data: stores = [] } = useStoresData();
 
+  const [open, setOpen] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [generalError, setGeneralError] = useState<string | null>(null);
+
   const {
     register,
     handleSubmit,
@@ -61,26 +65,27 @@ export function UploadDialog() {
     },
   });
 
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [generalError, setGeneralError] = useState<string | null>(null);
-
   const selectedFile = watch('file')?.[0];
 
   const mutation = useMutation({
     mutationFn: (formData: FormData) =>
-      axiosInstance
-        .post('/api/product-history/upload-product-history', formData, {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-            'Access-Control-Allow-Origin': '*',
-          },
-          onUploadProgress: (progressEvent) => {
-            const percentCompleted = Math.round(
-              (progressEvent.loaded * 100) / (progressEvent.total || 1)
-            );
-            setUploadProgress(percentCompleted);
-          },
-        })
+      axios
+        .post(
+          'http://localhost:5000/api/product-history/upload-product-history',
+          formData,
+          {
+            headers: {
+              'Content-Type': 'multipart/form-data',
+              'Access-Control-Allow-Origin': '*',
+            },
+            onUploadProgress: (progressEvent) => {
+              const percentCompleted = Math.round(
+                (progressEvent.loaded * 100) / (progressEvent.total || 1)
+              );
+              setUploadProgress(percentCompleted);
+            },
+          }
+        )
         .then((res) => res.data),
     onMutate: () => {
       setUploadProgress(0);
@@ -131,6 +136,8 @@ export function UploadDialog() {
     reset();
     setGeneralError(null);
     setUploadProgress(0);
+    setOpen(false); // close dialog
+    mutation.reset(); // ✅ Reset mutation state
   };
 
   const formatFileSize = (bytes: number) => {
@@ -144,11 +151,20 @@ export function UploadDialog() {
   };
 
   return (
-    <Dialog>
+    <Dialog
+      open={open}
+      onOpenChange={(val) => {
+        setOpen(val);
+        if (!val) handleClose();
+      }}
+    >
       <DialogTrigger asChild>
         <Button variant="outline">Upload File</Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent
+        key={open ? 'open' : 'closed'}
+        className="sm:max-w-[600px]"
+      >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Upload className="h-5 w-5" />

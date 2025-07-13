@@ -14,7 +14,15 @@ import {
   SidebarRail,
 } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
-import { Home, Package, ShoppingCart, Users } from 'lucide-react';
+import {
+  Home,
+  Package,
+  Shield,
+  ShieldCheck,
+  ShoppingCart,
+  UserCheck2,
+  Users,
+} from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { BiStoreAlt } from 'react-icons/bi';
@@ -47,10 +55,27 @@ const navigationItems = [
     url: '/store',
     icon: BiStoreAlt,
   },
+];
+const userNavigationItems = [
   {
     title: 'Users',
     url: '/users',
     icon: Users,
+  },
+  {
+    title: 'Create Role',
+    url: '/users/create-role',
+    icon: Shield,
+  },
+  {
+    title: 'All Roles',
+    url: '/users/all-roles',
+    icon: ShieldCheck,
+  },
+  {
+    title: 'Assign Roles',
+    url: '/users/assign-roles',
+    icon: UserCheck2,
   },
 ];
 
@@ -83,6 +108,34 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               {navigationItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={pathname === item.url}
+                    className={cn(
+                      'w-full justify-start gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                      pathname === item.url
+                        ? 'bg-gray-950 text-primary-foreground dark:bg-gray-950 dark:text-white'
+                        : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-gray-100'
+                    )}
+                  >
+                    <Link href={item.url}>
+                      <item.icon className="h-4 w-4" />
+                      <span>{item.title}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+        <SidebarGroup>
+          <SidebarGroupLabel className="px-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+            USER MANAGEMENT
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {userNavigationItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
                     asChild
