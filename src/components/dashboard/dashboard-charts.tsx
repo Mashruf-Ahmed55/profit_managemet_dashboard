@@ -1,7 +1,6 @@
 'use client';
 
 import { Skeleton } from '@/components/ui/skeleton';
-import { getRevenueData } from '@/lib/api/dashboard';
 import { useQuery } from '@tanstack/react-query';
 import {
   CartesianGrid,
