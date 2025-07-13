@@ -26,7 +26,7 @@ import {
 } from '@/components/ui/select';
 
 import { useStoresData } from '@/hooks/useStoreData';
-
+import axiosInstance from '@/lib/axiosInstance';
 import axios from 'axios';
 import {
   AlertCircle,
@@ -69,9 +69,9 @@ export function UploadDialog() {
 
   const mutation = useMutation({
     mutationFn: (formData: FormData) =>
-      axios
+      axiosInstance
         .post(
-          'http://localhost:5000/api/product-history/upload-product-history',
+          '/api/product-history/upload-product-history',
           formData,
           {
             headers: {
