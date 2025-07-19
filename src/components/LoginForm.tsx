@@ -13,6 +13,38 @@ import { useId, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
 
+interface LoginResponse {
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    roles: Array<{
+      _id: string;
+      name: string;
+      permissions: Array<{
+        _id: string;
+        name: string;
+      }>;
+      createdAt: string;
+      updatedAt: string;
+      __v: number;
+    }>;
+    allowedStores: Array<{
+      _id: string;
+      storeId: string;
+      storeName: string;
+      storeEmail: string;
+    }>;
+    createdAt: string;
+    updatedAt: string;
+    __v: number;
+    profileImage: string | null;
+    lastLogin: string;
+  };
+  token: string;
+  message: string;
+}
+
 export function LoginForm({
   className,
   ...props
@@ -37,26 +69,37 @@ export function LoginForm({
 
   const mutation = useMutation({
     mutationFn: async (data: { email: string; password: string }) => {
-      const res = await axiosInstance.post('/api/users/login', data, {
-        withCredentials: true,
-      });
+      const res = await axiosInstance.post<LoginResponse>(
+        '/api/users/login',
+        data,
+        {
+          withCredentials: true,
+        }
+      );
       return res.data;
     },
     onSuccess: (data) => {
-      setUser({
-        id: data.user.id,
-        name: data.user.name,
-        email: data.user.email,
-        role: data.user.role,
-      });
+      setUser(
+        {
+          id: data.user.id,
+          name: data.user.name,
+          email: data.user.email,
+          roles: data.user.roles,
+          profileImage: data.user.profileImage,
+          allowedStores: data.user.allowedStores,
+          lastLogin: data.user.lastLogin,
+        },
+        data.token
+      );
       toast.success(data.message);
       router.push('/dashboard');
     },
     onError: (error: any) => {
       toast.error(error?.response?.data?.message || 'Login failed');
-      console.log(error);
+      console.error('Login error:', error);
     },
   });
+
   const onSubmit = (data: { email: string; password: string }) => {
     mutation.mutate(data);
   };
@@ -86,10 +129,17 @@ export function LoginForm({
           </Label>
           <div className="relative">
             <Input
-              {...register('email')}
+              {...register('email', {
+                required: 'Email is required',
+                pattern: {
+                  value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                  message: 'Invalid email address',
+                },
+              })}
               type="email"
               placeholder="Email"
               className="ps-9 text-accent"
+              disabled={mutation.isPending}
             />
             <div className="pointer-events-none absolute inset-y-0 start-0 flex items-center ps-3 text-muted-foreground">
               <AtSignIcon size={16} aria-hidden="true" />
@@ -108,10 +158,17 @@ export function LoginForm({
           <div className="relative">
             <Input
               id={passwordInputId}
-              {...register('password')}
+              {...register('password', {
+                required: 'Password is required',
+                minLength: {
+                  value: 6,
+                  message: 'Password must be at least 6 characters',
+                },
+              })}
               type={isVisible ? 'text' : 'password'}
               placeholder="Password"
               className="ps-9 pe-9 text-accent"
+              disabled={mutation.isPending}
             />
             {/* Left icon */}
             <div className="pointer-events-none absolute inset-y-0 start-0 flex items-center ps-3 text-muted-foreground">
@@ -125,6 +182,7 @@ export function LoginForm({
               aria-label={isVisible ? 'Hide password' : 'Show password'}
               aria-pressed={isVisible}
               aria-controls={passwordInputId}
+              disabled={mutation.isPending}
             >
               {isVisible ? (
                 <EyeOffIcon size={16} aria-hidden="true" />
@@ -133,10 +191,18 @@ export function LoginForm({
               )}
             </button>
           </div>
+          {errors.password && (
+            <p className="text-sm text-red-500">{errors.password.message}</p>
+          )}
         </div>
 
         {/* Submit */}
-        <Button disabled={mutation.isPending} type="submit" className="w-full">
+        <Button
+          disabled={mutation.isPending}
+          type="submit"
+          className="w-full"
+          aria-disabled={mutation.isPending}
+        >
           {mutation.isPending ? 'Logging in...' : 'Login'}
         </Button>
       </div>

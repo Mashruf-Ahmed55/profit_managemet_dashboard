@@ -33,6 +33,8 @@ import {
 } from 'lucide-react';
 import Image from 'next/image';
 import { useState } from 'react';
+import { Input } from '../ui/input';
+import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
 
 export interface OrderedProduct {
   _id: string;
@@ -75,12 +77,14 @@ export function OrdersTable() {
   const [limit, setLimit] = useState(20);
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('');
+  const [storeId, setStoreId] = useState('');
 
   const { data, isLoading, error, refetch, isFetching } = useOrders({
     page,
     limit,
     search,
     status,
+    storeId,
   });
 
   const { prefetchNextPage } = usePrefetchOrders();
@@ -232,6 +236,28 @@ export function OrdersTable() {
           Refresh
         </Button>
       </div>
+      <div className="flex flex-wrap gap-4 items-center justify-between mb-4">
+        <SearchInput value={search} onChange={setSearch} />
+        <StoreSelect
+          stores={[
+            { id: 'store1', name: 'Store One' },
+            { id: 'store2', name: 'Store Two' },
+            // You can replace this with API data
+          ]}
+          value={storeId}
+          onChange={(value) => {
+            setStoreId(value);
+            setPage(1);
+          }}
+        />
+        <StatusFilters
+          value={status}
+          onChange={(value) => {
+            setStatus(value);
+            setPage(1);
+          }}
+        />
+      </div>
 
       <div className="rounded-lg border bg-card shadow-sm overflow-hidden">
         <Table className="text-sm w-full">
@@ -240,8 +266,8 @@ export function OrdersTable() {
               <TableHead className="min-w-[200px] font-semibold text-foreground/80 bg-muted/30 py-4">
                 Order Info
               </TableHead>
-              <TableHead className="min-w-[120px] font-semibold text-foreground/80 bg-muted/30 py-4">
-                Status
+              <TableHead className="min-w-[280px] font-semibold text-foreground/80 bg-muted/30 py-4">
+                Products
               </TableHead>
               <TableHead className="min-w-[160px] font-semibold text-foreground/80 bg-muted/30 py-4">
                 Customer
@@ -249,8 +275,11 @@ export function OrdersTable() {
               <TableHead className="min-w-[140px] font-semibold text-foreground/80 bg-muted/30 py-4">
                 Shipping
               </TableHead>
-              <TableHead className="min-w-[280px] font-semibold text-foreground/80 bg-muted/30 py-4">
-                Products
+              <TableHead className="min-w-[120px] font-semibold text-foreground/80 bg-muted/30 py-4">
+                Status
+              </TableHead>
+              <TableHead className="min-w-[140px] font-semibold text-foreground/80 bg-muted/30 py-4">
+                Tax
               </TableHead>
               <TableHead className="text-right min-w-[120px] font-semibold text-foreground/80 bg-muted/30 py-4">
                 Total
@@ -281,23 +310,51 @@ export function OrdersTable() {
                   </div>
                 </TableCell>
 
-                {/* Status */}
-                <TableCell>
-                  <Badge
-                    className={
-                      order.status === 'Delivered'
-                        ? 'capitalize text-xs px-3 py-1 bg-green-100 text-green-800 border-green-200 font-medium'
-                        : order.status === 'Shipped'
-                        ? 'capitalize text-xs px-3 py-1 bg-blue-100 text-blue-800 border-blue-200 font-medium'
-                        : order.status === 'Acknowledged'
-                        ? 'capitalize text-xs px-3 py-1 bg-orange-50 text-orange-700 border-orange-200 font-medium'
-                        : order.status === 'Pending'
-                        ? 'capitalize text-xs px-3 py-1 bg-yellow-50 text-yellow-700 border-yellow-200 font-medium'
-                        : 'capitalize text-xs px-3 py-1 bg-red-100 text-red-800 border-red-200 font-medium'
-                    }
-                  >
-                    {order.status}
-                  </Badge>
+                {/* Products */}
+                <TableCell className="space-y-4 max-w-[280px] py-3 truncate">
+                  {order.products?.map((product) => (
+                    <div
+                      key={product._id}
+                      className="flex gap-3 p-2 rounded-md hover:bg-muted/20 transition-colors"
+                    >
+                      <div className="relative h-16 w-16 rounded-lg overflow-hidden border-2 border-border/20 shadow-sm flex-shrink-0">
+                        <Image
+                          src={
+                            product.imageUrl ||
+                            '/placeholder.svg?height=64&width=64'
+                          }
+                          alt={product.productName}
+                          fill
+                          className="object-cover"
+                          unoptimized
+                        />
+                      </div>
+                      <div className="flex-1 space-y-1 min-w-0">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <p className="font-medium line-clamp-2 text-foreground group-hover:text-primary transition-colors text-sm truncate">
+                              {product.productName}
+                            </p>
+                          </TooltipTrigger>
+                          <TooltipContent className="w-80 text-balance text-justify leading-5">
+                            {product.productName}
+                          </TooltipContent>
+                        </Tooltip>
+
+                        <p className="text-xs text-muted-foreground/80 font-mono bg-muted/30 px-2 py-1 rounded w-fit">
+                          SKU: {product.productSKU}
+                        </p>
+                        <div className="flex gap-3 flex-wrap text-xs">
+                          <span className=" font-medium bg-blue-50 text-blue-700 px-2 py-1 rounded">
+                            Qty: {product.quantity}
+                          </span>
+                          <span className="font-medium bg-green-50 text-green-700 px-2 py-1 rounded">
+                            Price: ${product.sellPrice}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </TableCell>
 
                 {/* Customer */}
@@ -337,43 +394,32 @@ export function OrdersTable() {
                   </div>
                 </TableCell>
 
-                {/* Products */}
-                <TableCell className="space-y-4 min-w-[300px] py-3">
-                  {order.products?.map((product) => (
-                    <div
-                      key={product._id}
-                      className="flex gap-3 p-2 rounded-md hover:bg-muted/20 transition-colors"
-                    >
-                      <div className="relative h-16 w-16 rounded-lg overflow-hidden border-2 border-border/20 shadow-sm flex-shrink-0">
-                        <Image
-                          src={
-                            product.imageUrl ||
-                            '/placeholder.svg?height=64&width=64'
-                          }
-                          alt={product.productName}
-                          fill
-                          className="object-cover"
-                          unoptimized
-                        />
-                      </div>
-                      <div className="flex-1 space-y-1 min-w-0">
-                        <p className="font-medium line-clamp-2 text-foreground group-hover:text-primary transition-colors text-sm">
-                          {product.productName}
-                        </p>
-                        <p className="text-xs text-muted-foreground/80 font-mono bg-muted/30 px-2 py-1 rounded w-fit">
-                          SKU: {product.productSKU}
-                        </p>
-                        <div className="flex gap-3 flex-wrap text-xs">
-                          <span className=" font-medium bg-blue-50 text-blue-700 px-2 py-1 rounded">
-                            Qty: {product.quantity}
-                          </span>
-                          <span className="font-medium bg-green-50 text-green-700 px-2 py-1 rounded">
-                            Price: ${product.sellPrice}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+                {/* Status */}
+                <TableCell>
+                  <Badge
+                    className={
+                      order.status === 'Delivered'
+                        ? 'capitalize text-xs px-3 py-1 bg-green-100 text-green-800 border-green-200 font-medium'
+                        : order.status === 'Shipped'
+                        ? 'capitalize text-xs px-3 py-1 bg-blue-100 text-blue-800 border-blue-200 font-medium'
+                        : order.status === 'Acknowledged'
+                        ? 'capitalize text-xs px-3 py-1 bg-orange-50 text-orange-700 border-orange-200 font-medium'
+                        : order.status === 'Pending'
+                        ? 'capitalize text-xs px-3 py-1 bg-yellow-50 text-yellow-700 border-yellow-200 font-medium'
+                        : 'capitalize text-xs px-3 py-1 bg-red-100 text-red-800 border-red-200 font-medium'
+                    }
+                  >
+                    {order.status}
+                  </Badge>
+                </TableCell>
+
+                {/* Tax */}
+                <TableCell>
+                  <div className="flex flex-col gap-2 py-2">
+                    <span className="text-sm text-muted-foreground font-medium">
+                      Tax: ${order.products?.[0]?.tax || '0.00'}
+                    </span>
+                  </div>
                 </TableCell>
 
                 {/* Total */}
@@ -387,16 +433,6 @@ export function OrdersTable() {
                             total +
                             (Number(product.sellPrice) || 0) +
                             (Number(product.tax) || 0),
-                          0
-                        )
-                        .toFixed(2)}
-                    </span>
-                    <span className="text-xs text-muted-foreground/70 bg-muted/30 px-2 py-1 rounded">
-                      Incl. tax $
-                      {order.products
-                        .reduce(
-                          (total, product) =>
-                            total + (Number(product.tax) || 0),
                           0
                         )
                         .toFixed(2)}
@@ -480,5 +516,75 @@ export function OrdersTable() {
         </div>
       </div>
     </div>
+  );
+}
+
+interface SearchInputProps {
+  value: string;
+  onChange: (value: string) => void;
+}
+
+function SearchInput({ value, onChange }: SearchInputProps) {
+  return (
+    <Input
+      type="text"
+      placeholder="Search orders..."
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="w-full max-w-sm"
+    />
+  );
+}
+
+interface StatusFilterProps {
+  value: string;
+  onChange: (value: string) => void;
+}
+
+const statuses = [
+  'Acknowledged',
+  'Pending',
+  'Shipped',
+  'Delivered',
+  'Cancelled',
+];
+
+function StatusFilters({ value, onChange }: StatusFilterProps) {
+  return (
+    <Select value={value} onValueChange={onChange}>
+      <SelectTrigger className="w-[160px]">
+        <SelectValue placeholder="Filter Status" />
+      </SelectTrigger>
+      <SelectContent>
+        {statuses.map((status) => (
+          <SelectItem key={status} value={status}>
+            {status}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
+
+interface StoreSelectProps {
+  stores: { id: string; name: string }[];
+  value: string;
+  onChange: (value: string) => void;
+}
+
+function StoreSelect({ stores, value, onChange }: StoreSelectProps) {
+  return (
+    <Select value={value} onValueChange={onChange}>
+      <SelectTrigger className="w-[200px]">
+        <SelectValue placeholder="Select Store" />
+      </SelectTrigger>
+      <SelectContent>
+        {stores.map((store) => (
+          <SelectItem key={store.id} value={store.id}>
+            {store.name}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }
