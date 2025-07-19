@@ -1,18 +1,9 @@
 'use client';
 
-import type React from 'react';
-
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -22,9 +13,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { useStoresData } from '@/hooks/useStoreData';
 import axiosInstance from '@/lib/axiosInstance';
 import {
-  AlertCircle,
   ArrowLeft,
   Calendar,
   CheckCircle,
@@ -32,7 +23,6 @@ import {
   Crown,
   Mail,
   Phone,
-  Save,
   Shield,
   Upload,
   User,
@@ -52,6 +42,15 @@ interface UserData {
   profileImage: string;
   createdAt: string;
   lastLogin?: string;
+  storeId?: string; // Added storeId field
+  department?: string; // Added department field
+  position?: string; // Added position field
+}
+
+interface Store {
+  _id: string;
+  storeId: string;
+  storeName: string;
 }
 
 interface FormErrors {
@@ -69,6 +68,7 @@ export default function UserPageEdit({
   onBack,
   onUserUpdated,
 }: EditUserPageProps) {
+  // Form state
   const [formData, setFormData] = useState<UserData>(
     user || {
       _id: '',
@@ -81,9 +81,12 @@ export default function UserPageEdit({
       status: 'active',
       profileImage: '',
       createdAt: '',
-      lastLogin: '',
+      department: '',
+      position: '',
+      storeId: '',
     }
   );
+
   const [errors, setErrors] = useState<FormErrors>({});
   const [imagePreview, setImagePreview] = useState<string>(
     user?.profileImage || ''
@@ -93,172 +96,92 @@ export default function UserPageEdit({
     'idle' | 'success' | 'error'
   >('idle');
 
-  console.log(user?._id);
+  // Fetch stores data
+  const { data: stores = [] } = useStoresData();
 
-  // Password change state
-  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
-  const [passwordData, setPasswordData] = useState({
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: '',
-  });
-  const [showPasswords, setShowPasswords] = useState({
-    current: false,
-    new: false,
-    confirm: false,
-  });
-
+  // Role options
   const roles = [
-    {
-      value: 'admin',
-      label: 'Admin',
-      color: 'bg-purple-100 text-purple-800',
-      icon: Crown,
-    },
-    {
-      value: 'manager',
-      label: 'Manager',
-      color: 'bg-blue-100 text-blue-800',
-      icon: Shield,
-    },
-    {
-      value: 'user',
-      label: 'User',
-      color: 'bg-green-100 text-green-800',
-      icon: User,
-    },
+    { value: 'admin', label: 'Admin', icon: Crown },
+    { value: 'manager', label: 'Manager', icon: Shield },
+    { value: 'user', label: 'User', icon: User },
   ];
 
+  // Department options
+  const departments = [
+    'Sales',
+    'Marketing',
+    'IT',
+    'Finance',
+    'Operations',
+    'Human Resources',
+    'Customer Service',
+  ];
+
+  // Validate form
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
 
-    // Name validation
     if (!formData.name.trim()) {
       newErrors.name = 'Full name is required';
-    } else if (formData.name.trim().length < 2) {
-      newErrors.name = 'Name must be at least 2 characters';
     }
 
-    // Email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!formData.email.trim()) {
       newErrors.email = 'Email is required';
-    } else if (!emailRegex.test(formData.email)) {
-      newErrors.email = 'Please enter a valid email address';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      newErrors.email = 'Invalid email format';
     }
 
-    // Username validation
-    if (!formData.username.trim()) {
-      newErrors.username = 'Username is required';
-    } else if (formData.username.length < 3) {
-      newErrors.username = 'Username must be at least 3 characters';
-    } else if (!/^[a-zA-Z0-9_]+$/.test(formData.username)) {
-      newErrors.username =
-        'Username can only contain letters, numbers, and underscores';
-    }
-
-    // Phone validation
     if (!formData.phone.trim()) {
       newErrors.phone = 'Phone number is required';
-    } else if (!/^\d{10,15}$/.test(formData.phone.replace(/\s/g, ''))) {
-      newErrors.phone = 'Please enter a valid phone number';
     }
 
-    // Address validation
-    if (!formData.address.trim()) {
-      newErrors.address = 'Address is required';
+    if (formData.role === 'manager' && !formData.storeId) {
+      newErrors.storeId = 'Store selection is required for managers';
     }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
+  // Handle input changes
   const handleInputChange = (field: keyof UserData, value: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-
-    // Clear error when user starts typing
-    if (errors[field]) {
-      setErrors((prev) => ({
-        ...prev,
-        [field]: '',
-      }));
-    }
+    setFormData((prev) => ({ ...prev, [field]: value }));
+    if (errors[field]) setErrors((prev) => ({ ...prev, [field]: '' }));
   };
 
+  // Handle image upload
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) {
-      // Validate file size (max 5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        setErrors((prev) => ({
-          ...prev,
-          profileImage: 'Image size must be less than 5MB',
-        }));
-        return;
-      }
+    if (!file) return;
 
-      // Validate file type
-      if (!file.type.startsWith('image/')) {
-        setErrors((prev) => ({
-          ...prev,
-          profileImage: 'Please select a valid image file',
-        }));
-        return;
-      }
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const result = e.target?.result as string;
-        setImagePreview(result);
-        setFormData((prev) => ({
-          ...prev,
-          profileImage: result,
-        }));
-      };
-      reader.readAsDataURL(file);
-
-      // Clear image error
-      if (errors.profileImage) {
-        setErrors((prev) => ({
-          ...prev,
-          profileImage: '',
-        }));
-      }
-    }
-  };
-
-  const handlePasswordChange = () => {
-    if (passwordData.newPassword !== passwordData.confirmPassword) {
-      alert("New passwords don't match!");
+    if (file.size > 5 * 1024 * 1024) {
+      setErrors((prev) => ({
+        ...prev,
+        profileImage: 'Image must be less than 5MB',
+      }));
       return;
     }
-    if (passwordData.newPassword.length < 6) {
-      alert('Password must be at least 6 characters long!');
+
+    if (!file.type.startsWith('image/')) {
+      setErrors((prev) => ({
+        ...prev,
+        profileImage: 'Please upload an image file',
+      }));
       return;
     }
-    // Here you would typically call an API to change the password
-    console.log('Password change requested:', passwordData);
-    alert('Password changed successfully!');
-    setPasswordData({
-      currentPassword: '',
-      newPassword: '',
-      confirmPassword: '',
-    });
-    setShowPasswordDialog(false);
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const result = e.target?.result as string;
+      setImagePreview(result);
+      setFormData((prev) => ({ ...prev, profileImage: result }));
+    };
+    reader.readAsDataURL(file);
   };
 
-  const togglePasswordVisibility = (field: 'current' | 'new' | 'confirm') => {
-    setShowPasswords((prev) => ({
-      ...prev,
-      [field]: !prev[field],
-    }));
-  };
-
+  // Form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (!validateForm()) return;
 
     setIsSubmitting(true);
@@ -266,22 +189,17 @@ export default function UserPageEdit({
 
     try {
       const form = new FormData();
-      form.append('name', formData.name);
-      form.append('email', formData.email);
-      form.append('username', formData.username);
-      form.append('phone', formData.phone);
-      form.append('address', formData.address);
-      form.append('role', formData.role);
-      form.append('status', formData.status);
+      Object.entries(formData).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          form.append(key, value.toString());
+        }
+      });
 
-      if (
-        formData.profileImage &&
-        formData.profileImage.startsWith('data:image')
-      ) {
+      if (formData.profileImage?.startsWith('data:image')) {
         const blob = await fetch(formData.profileImage).then((res) =>
           res.blob()
         );
-        form.append('profileImage', blob, 'profile.jpg');
+        form.append('profileImageFile', blob, 'profile.jpg');
       }
 
       const res = await axiosInstance.put(
@@ -292,7 +210,7 @@ export default function UserPageEdit({
 
       onUserUpdated(res.data.updatedUser);
       setSubmitStatus('success');
-      setTimeout(() => onBack(), 1500);
+      setTimeout(onBack, 1500);
     } catch (error) {
       console.error('Error updating user:', error);
       setSubmitStatus('error');
@@ -301,30 +219,17 @@ export default function UserPageEdit({
     }
   };
 
-  const getInitials = (name: string) => {
-    return name
+  // Helper functions
+  const getInitials = (name: string) =>
+    name
       .split(' ')
       .map((n) => n[0])
       .join('')
       .toUpperCase();
-  };
-
-  const getRoleInfo = (role: string) => {
-    return roles.find((r) => r.value === role) || roles[2]; // Default to user
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'active':
-        return 'bg-green-100 text-green-800';
-      case 'inactive':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const currentRole = getRoleInfo(formData.role);
+  const getStatusColor = (status: string) =>
+    status === 'active'
+      ? 'bg-green-100 text-green-800'
+      : 'bg-red-100 text-red-800';
 
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4">
@@ -336,53 +241,40 @@ export default function UserPageEdit({
             Back to Users
           </Button>
           <div className="flex items-center mb-4">
-            <User className="h-8 w-8 text-prim mr-3" />
+            <User className="h-8 w-8 text-primary mr-3" />
             <div>
               <h1 className="text-3xl font-bold text-gray-900">Edit User</h1>
-              <p className="text-gray-600">
-                Update user information and account settings
-              </p>
+              <p className="text-gray-600">Update user information</p>
             </div>
           </div>
         </div>
 
         {/* Success/Error Messages */}
         {submitStatus === 'success' && (
-          <Alert className="mb-6 border-green-200 bg-green-50">
-            <CheckCircle className="h-4 w-4 text-green-600" />
-            <AlertDescription className="text-green-800">
-              User updated successfully! Redirecting back to users list...
-            </AlertDescription>
-          </Alert>
+          <div className="mb-6 p-4 bg-green-50 text-green-800 rounded-md border border-green-200 flex items-center">
+            <CheckCircle className="h-5 w-5 mr-2" />
+            User updated successfully!
+          </div>
         )}
 
         {submitStatus === 'error' && (
-          <Alert className="mb-6 border-red-200 bg-red-50">
-            <AlertCircle className="h-4 w-4 text-red-600" />
-            <AlertDescription className="text-red-800">
-              Failed to update user. Please try again.
-            </AlertDescription>
-          </Alert>
+          <div className="mb-6 p-4 bg-red-50 text-red-800 rounded-md border border-red-200 flex items-center">
+            <X className="h-5 w-5 mr-2" />
+            Failed to update user. Please try again.
+          </div>
         )}
 
         <form onSubmit={handleSubmit}>
-          {/* User Overview Card */}
+          {/* User Profile Card */}
           <Card className="mb-6">
             <CardHeader className="pb-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
                   <div className="relative">
                     <Avatar className="h-20 w-20">
-                      <AvatarImage
-                        src={imagePreview || '/placeholder.svg'}
-                        alt="Profile preview"
-                      />
-                      <AvatarFallback className="text-lg bg-gray-100">
-                        {formData.name ? (
-                          getInitials(formData.name)
-                        ) : (
-                          <User className="h-8 w-8" />
-                        )}
+                      <AvatarImage src={imagePreview} alt="Profile" />
+                      <AvatarFallback className="bg-gray-100">
+                        {getInitials(formData.name)}
                       </AvatarFallback>
                     </Avatar>
                     <input
@@ -404,14 +296,11 @@ export default function UserPageEdit({
                     </label>
                   </div>
                   <div>
-                    <h2 className="text-2xl font-semibold text-gray-900">
-                      {formData.name}
-                    </h2>
+                    <h2 className="text-2xl font-semibold">{formData.name}</h2>
                     <p className="text-gray-600">@{formData.username}</p>
                     <div className="flex items-center space-x-2 mt-2">
-                      <Badge className={currentRole.color}>
-                        <currentRole.icon className="h-3 w-3 mr-1" />
-                        {currentRole.label}
+                      <Badge variant="outline" className="capitalize">
+                        {formData.role}
                       </Badge>
                       <Badge className={getStatusColor(formData.status)}>
                         {formData.status.toUpperCase()}
@@ -433,11 +322,6 @@ export default function UserPageEdit({
                   )}
                 </div>
               </div>
-              {errors.profileImage && (
-                <p className="text-sm text-red-600 mt-2">
-                  {errors.profileImage}
-                </p>
-              )}
             </CardHeader>
           </Card>
 
@@ -449,20 +333,14 @@ export default function UserPageEdit({
                   <User className="h-5 w-5 mr-2" />
                   Personal Information
                 </CardTitle>
-                <CardDescription>
-                  Basic user details and contact information
-                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="name">
-                    Full Name <span className="text-red-500">*</span>
-                  </Label>
+                  <Label>Full Name *</Label>
                   <Input
-                    id="name"
                     value={formData.name}
                     onChange={(e) => handleInputChange('name', e.target.value)}
-                    placeholder="Enter full name"
+                    placeholder="Full name"
                     className={errors.name ? 'border-red-500' : ''}
                   />
                   {errors.name && (
@@ -471,37 +349,15 @@ export default function UserPageEdit({
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="username">
-                    Username <span className="text-red-500">*</span>
-                  </Label>
-                  <Input
-                    id="username"
-                    value={formData.username}
-                    onChange={(e) =>
-                      handleInputChange('username', e.target.value)
-                    }
-                    placeholder="Enter username"
-                    className={errors.username ? 'border-red-500' : ''}
-                  />
-                  {errors.username && (
-                    <p className="text-sm text-red-600">{errors.username}</p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="email">
-                    Email Address <span className="text-red-500">*</span>
-                  </Label>
+                  <Label>Email *</Label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                     <Input
-                      id="email"
-                      type="email"
                       value={formData.email}
                       onChange={(e) =>
                         handleInputChange('email', e.target.value)
                       }
-                      placeholder="Enter email address"
+                      placeholder="Email"
                       className={`pl-10 ${
                         errors.email ? 'border-red-500' : ''
                       }`}
@@ -513,18 +369,15 @@ export default function UserPageEdit({
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="phone">
-                    Phone Number <span className="text-red-500">*</span>
-                  </Label>
+                  <Label>Phone *</Label>
                   <div className="relative">
                     <Phone className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                     <Input
-                      id="phone"
                       value={formData.phone}
                       onChange={(e) =>
                         handleInputChange('phone', e.target.value)
                       }
-                      placeholder="Enter phone number"
+                      placeholder="Phone number"
                       className={`pl-10 ${
                         errors.phone ? 'border-red-500' : ''
                       }`}
@@ -534,36 +387,44 @@ export default function UserPageEdit({
                     <p className="text-sm text-red-600">{errors.phone}</p>
                   )}
                 </div>
+
+                <div className="space-y-2">
+                  <Label>Address</Label>
+                  <Input
+                    value={formData.address}
+                    onChange={(e) =>
+                      handleInputChange('address', e.target.value)
+                    }
+                    placeholder="Address"
+                  />
+                </div>
               </CardContent>
             </Card>
 
-            {/* Account Settings */}
+            {/* Professional Information */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center">
                   <Shield className="h-5 w-5 mr-2" />
-                  Account Settings
+                  Professional Information
                 </CardTitle>
-                <CardDescription>
-                  Role, status, and security configuration
-                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="role">User Role</Label>
+                  <Label>Role</Label>
                   <Select
                     value={formData.role}
                     onValueChange={(value) => handleInputChange('role', value)}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select a role" />
+                      <SelectValue placeholder="Select role" />
                     </SelectTrigger>
                     <SelectContent>
                       {roles.map((role) => (
                         <SelectItem key={role.value} value={role.value}>
                           <div className="flex items-center">
                             <role.icon className="h-4 w-4 mr-2" />
-                            <span className="capitalize">{role.label}</span>
+                            {role.label}
                           </div>
                         </SelectItem>
                       ))}
@@ -571,8 +432,68 @@ export default function UserPageEdit({
                   </Select>
                 </div>
 
+                {formData.role === 'manager' && (
+                  <div className="space-y-2">
+                    <Label>Assigned Store *</Label>
+                    <Select
+                      value={formData.storeId}
+                      onValueChange={(value) =>
+                        handleInputChange('storeId', value)
+                      }
+                    >
+                      <SelectTrigger
+                        className={errors.storeId ? 'border-red-500' : ''}
+                      >
+                        <SelectValue placeholder="Select store" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {stores.map((store) => (
+                          <SelectItem key={store._id} value={store._id}>
+                            {store.storeName}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {errors.storeId && (
+                      <p className="text-sm text-red-600">{errors.storeId}</p>
+                    )}
+                  </div>
+                )}
+
                 <div className="space-y-2">
-                  <Label htmlFor="status">Account Status</Label>
+                  <Label>Department</Label>
+                  <Select
+                    value={formData.department || ''}
+                    onValueChange={(value) =>
+                      handleInputChange('department', value)
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select department" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {departments.map((dept) => (
+                        <SelectItem key={dept} value={dept}>
+                          {dept}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Position</Label>
+                  <Input
+                    value={formData.position || ''}
+                    onChange={(e) =>
+                      handleInputChange('position', e.target.value)
+                    }
+                    placeholder="Job position"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Status</Label>
                   <Select
                     value={formData.status}
                     onValueChange={(value) =>
@@ -583,206 +504,14 @@ export default function UserPageEdit({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="active">
-                        <div className="flex items-center">
-                          <div className="h-2 w-2 rounded-full bg-green-500 mr-2"></div>
-                          Active
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="inactive">
-                        <div className="flex items-center">
-                          <div className="h-2 w-2 rounded-full bg-red-500 mr-2"></div>
-                          Inactive
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="pending">
-                        <div className="flex items-center">
-                          <div className="h-2 w-2 rounded-full bg-yellow-500 mr-2"></div>
-                          Pending
-                        </div>
-                      </SelectItem>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="inactive">Inactive</SelectItem>
                     </SelectContent>
                   </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Account Information</Label>
-                  <div className="bg-gray-50 p-3 rounded-md space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">User ID:</span>
-                      <span className="font-mono">{formData._id}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Created:</span>
-                      <span>
-                        {new Date(formData.createdAt).toLocaleDateString()}
-                      </span>
-                    </div>
-                    {formData.lastLogin && (
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">Last Login:</span>
-                        <span>
-                          {new Date(formData.lastLogin).toLocaleDateString()}
-                        </span>
-                      </div>
-                    )}
-                  </div>
                 </div>
               </CardContent>
             </Card>
           </div>
-          {/* Security Section */}
-          {/* <Card className="mt-6">
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Key className="h-5 w-5 mr-2" />
-                Security Settings
-              </CardTitle>
-              <CardDescription>
-                Manage user password and security options
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                <div>
-                  <h4 className="font-medium text-gray-900">Password</h4>
-                  <p className="text-sm text-gray-600">
-                    Change the user's password
-                  </p>
-                </div>
-                <Dialog
-                  open={showPasswordDialog}
-                  onOpenChange={setShowPasswordDialog}
-                >
-                  <DialogTrigger asChild>
-                    <Button variant="outline">
-                      <Key className="h-4 w-4 mr-2" />
-                      Change Password
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="sm:max-w-[425px]">
-                    <DialogHeader>
-                      <DialogTitle>Change User Password</DialogTitle>
-                      <DialogDescription>
-                        Update the password for {formData.name}. Enter your
-                        admin password to confirm.
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="grid gap-4 py-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="current-password">
-                          Your Admin Password
-                        </Label>
-                        <div className="relative">
-                          <Input
-                            id="current-password"
-                            type={showPasswords.current ? 'text' : 'password'}
-                            value={passwordData.currentPassword}
-                            onChange={(e) =>
-                              setPasswordData((prev) => ({
-                                ...prev,
-                                currentPassword: e.target.value,
-                              }))
-                            }
-                            placeholder="Enter your admin password"
-                          />
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                            onClick={() => togglePasswordVisibility('current')}
-                          >
-                            {showPasswords.current ? (
-                              <EyeOff className="h-4 w-4" />
-                            ) : (
-                              <Eye className="h-4 w-4" />
-                            )}
-                          </Button>
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="new-password">
-                          New Password for User
-                        </Label>
-                        <div className="relative">
-                          <Input
-                            id="new-password"
-                            type={showPasswords.new ? 'text' : 'password'}
-                            value={passwordData.newPassword}
-                            onChange={(e) =>
-                              setPasswordData((prev) => ({
-                                ...prev,
-                                newPassword: e.target.value,
-                              }))
-                            }
-                            placeholder="Enter new password"
-                          />
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                            onClick={() => togglePasswordVisibility('new')}
-                          >
-                            {showPasswords.new ? (
-                              <EyeOff className="h-4 w-4" />
-                            ) : (
-                              <Eye className="h-4 w-4" />
-                            )}
-                          </Button>
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="confirm-password">
-                          Confirm New Password
-                        </Label>
-                        <div className="relative">
-                          <Input
-                            id="confirm-password"
-                            type={showPasswords.confirm ? 'text' : 'password'}
-                            value={passwordData.confirmPassword}
-                            onChange={(e) =>
-                              setPasswordData((prev) => ({
-                                ...prev,
-                                confirmPassword: e.target.value,
-                              }))
-                            }
-                            placeholder="Confirm new password"
-                          />
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                            onClick={() => togglePasswordVisibility('confirm')}
-                          >
-                            {showPasswords.confirm ? (
-                              <EyeOff className="h-4 w-4" />
-                            ) : (
-                              <Eye className="h-4 w-4" />
-                            )}
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                    <DialogFooter>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => setShowPasswordDialog(false)}
-                      >
-                        Cancel
-                      </Button>
-                      <Button type="button" onClick={handlePasswordChange}>
-                        Change Password
-                      </Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
-              </div>
-            </CardContent>
-          </Card> */}
 
           {/* Action Buttons */}
           <div className="flex justify-end space-x-4 mt-8">
@@ -792,22 +521,10 @@ export default function UserPageEdit({
               onClick={onBack}
               disabled={isSubmitting}
             >
-              
-              <X className="h-4 w-4 mr-2" />
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  Updating User...
-                </>
-              ) : (
-                <>
-                  <Save className="h-4 w-4 mr-2" />
-                  Update User
-                </>
-              )}
+              {isSubmitting ? 'Saving...' : 'Save Changes'}
             </Button>
           </div>
         </form>

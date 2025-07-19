@@ -1,30 +1,37 @@
 'use client';
 
 import axiosInstance from '@/lib/axiosInstance';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  keepPreviousData,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
 
-// Define the expected API response type
-
-interface UseOrdersParams {
+// Define the expected query parameters
+export interface UseOrdersParams {
   page: number;
   limit: number;
   search?: string;
   status?: string;
+  storeId?: string;
 }
 
+// 🧠 Fetcher Function
 const fetchOrders = async ({
   page,
   limit,
   search,
   status,
+  storeId,
 }: UseOrdersParams) => {
   const params = new URLSearchParams({
-    page: page.toString(),
-    limit: limit.toString(),
+    page: String(page),
+    limit: String(limit),
   });
 
   if (search) params.append('search', search);
   if (status) params.append('status', status);
+  if (storeId) params.append('storeId', storeId);
 
   const response = await axiosInstance.get(
     `/api/orders/get-orders?${params.toString()}`
@@ -33,20 +40,23 @@ const fetchOrders = async ({
   return response.data;
 };
 
+// ✅ Main Hook
 export function useOrders({
   page = 1,
   limit = 20,
   search = '',
   status = '',
+  storeId = '',
 }: Partial<UseOrdersParams> = {}) {
   return useQuery({
-    queryKey: ['orders', { page, limit, search, status }],
-    queryFn: () => fetchOrders({ page, limit, search, status }),
-    placeholderData: (previousData) => previousData, // Keep previous data while loading new data
+    queryKey: ['orders', { page, limit, search, status, storeId }],
+    queryFn: () => fetchOrders({ page, limit, search, status, storeId }),
+    placeholderData: keepPreviousData,
+    staleTime: 60 * 1000,
   });
 }
 
-// Hook for prefetching next page
+// ✅ Prefetch Hook (optional for pagination)
 export function usePrefetchOrders() {
   const queryClient = useQueryClient();
 
@@ -54,13 +64,23 @@ export function usePrefetchOrders() {
     currentPage: number,
     limit: number,
     search?: string,
-    status?: string
+    status?: string,
+    storeId?: string
   ) => {
     queryClient.prefetchQuery({
-      queryKey: ['orders', { page: currentPage + 1, limit, search, status }],
+      queryKey: [
+        'orders',
+        { page: currentPage + 1, limit, search, status, storeId },
+      ],
       queryFn: () =>
-        fetchOrders({ page: currentPage + 1, limit, search, status }),
-      staleTime: 5 * 60 * 1000,
+        fetchOrders({
+          page: currentPage + 1,
+          limit,
+          search,
+          status,
+          storeId,
+        }),
+      staleTime: 5 * 60 * 1000, // 5 min
     });
   };
 
