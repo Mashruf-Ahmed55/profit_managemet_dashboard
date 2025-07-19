@@ -26,8 +26,6 @@ import {
 } from '@/components/ui/select';
 
 import { useStoresData } from '@/hooks/useStoreData';
-
-import axiosInstance from '@/lib/axiosInstance';
 import {
   AlertCircle,
   CheckCircle2,
@@ -69,19 +67,7 @@ export function UploadDialog() {
 
   const mutation = useMutation({
     mutationFn: (formData: FormData) =>
-      axiosInstance
-        .post('/api/product-history/upload-product-history', formData, {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-            'Access-Control-Allow-Origin': '*',
-          },
-          onUploadProgress: (progressEvent) => {
-            const percentCompleted = Math.round(
-              (progressEvent.loaded * 100) / (progressEvent.total || 1)
-            );
-            setUploadProgress(percentCompleted);
-          },
-        })
+      axiosInstanc
         .then((res) => res.data),
     onMutate: () => {
       setUploadProgress(0);
