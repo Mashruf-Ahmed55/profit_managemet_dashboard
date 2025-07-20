@@ -203,11 +203,11 @@ export function ProductsTable({
         stores={stores}
       />
 
-      <div className="rounded-lg border bg-card shadow-sm overflow-hidden">
-        <Table>
-          <TableHeader>
+      <div className="rounded-lg border bg-card max-h-[70vh] overflow-y-scroll">
+        <Table className="min-w-full table-auto  overflow-scroll">
+          <TableHeader className="sticky left-0 z-20 bg-card min-w-[280px] border-r">
             <TableRow>
-              <TableHead className="min-w-[280px]">Product</TableHead>
+              <TableHead className="min-w-[280px] sticky left-0 z-20 bg-card">Product</TableHead>
               <TableHead className="min-w-[140px]">Category</TableHead>
               <TableHead className="min-w-[120px]">SKU</TableHead>
               <TableHead className="min-w-[160px]">Identifiers</TableHead>

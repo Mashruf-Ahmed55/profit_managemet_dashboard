@@ -15,15 +15,7 @@ import {
 } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/useAuthStore';
-import {
-  Home,
-  Package,
-  Shield,
-  ShieldCheck,
-  ShoppingCart,
-  UserCheck2,
-  Users,
-} from 'lucide-react';
+import { Home, Package, Shield, ShoppingCart, Users } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { BiStoreAlt } from 'react-icons/bi';
@@ -72,22 +64,10 @@ const userNavigationItems = [
     requiredPermissions: ['user:view'],
   },
   {
-    title: 'Create Role',
-    url: '/users/create-role',
+    title: 'Role Management',
+    url: '/users/roles',
     icon: Shield,
     requiredPermissions: ['role:create'],
-  },
-  {
-    title: 'All Roles',
-    url: '/users/all-roles',
-    icon: ShieldCheck,
-    requiredPermissions: ['role:view'],
-  },
-  {
-    title: 'Assign Roles',
-    url: '/users/assign-roles',
-    icon: UserCheck2,
-    requiredPermissions: ['user:edit'],
   },
 ];
 
