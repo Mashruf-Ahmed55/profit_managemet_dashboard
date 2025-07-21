@@ -1,16 +1,5 @@
 'use client';
 
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -41,9 +30,12 @@ import {
 } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
+import { useRole } from '@/hooks/useRole';
 import axiosInstance from '@/lib/axiosInstance';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Edit, Plus, Search, Shield, Trash2, Users } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
 
 interface Permission {
   _id: string;
@@ -68,155 +60,119 @@ interface CreateRolePayload {
 }
 
 export default function PermissionsManagement() {
-  const [roles, setRoles] = useState<Role[]>([]);
-  const [permissions, setPermissions] = useState<Permission[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
   const [editingPermission, setEditingPermission] = useState<Permission | null>(
     null
   );
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isAddPermissionsDialogOpen, setIsAddPermissionsDialogOpen] =
     useState(false);
   const [isEditPermissionsDialogOpen, setIsEditPermissionsDialogOpen] =
     useState(false);
   const [isCreateRoleDialogOpen, setIsCreateRoleDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
 
-  const fetchData = async () => {
-    try {
-      setIsLoading(true);
-      const [permissionsRes, rolesRes] = await Promise.all([
-        axiosInstance.get('/api/permissions/all'),
-        axiosInstance.get('/api/roles/all'),
-      ]);
-      setPermissions(permissionsRes.data.data);
-      setRoles(rolesRes.data.data);
-    } catch (error) {
-      console.error('Error fetching data:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const queryClient = useQueryClient();
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const filteredRoles = roles.filter((role) => {
-    if (!role?.name) return false;
-
-    const searchTermLower = searchTerm.toLowerCase();
-    const roleNameLower = role.name.toLowerCase();
-
-    if (roleNameLower.includes(searchTermLower)) {
-      return true;
-    }
-
-    if (role.permissions?.length) {
-      return role.permissions.some((p) =>
-        p?.name?.toLowerCase()?.includes(searchTermLower)
-      );
-    }
-
-    return false;
+  const { data: permissions = [], isLoading: isPermissionsLoading } = useQuery({
+    queryKey: ['permissions'],
+    queryFn: () =>
+      axiosInstance.get('/api/permissions/all').then((res) => res.data.data),
   });
 
-  const getPermissionColor = (permissionName: string) => {
-    if (permissionName.includes(':view')) return 'bg-blue-100 text-blue-800';
-    if (permissionName.includes(':create'))
-      return 'bg-green-100 text-green-800';
-    if (permissionName.includes(':edit'))
-      return 'bg-yellow-100 text-yellow-800';
-    if (permissionName.includes(':delete')) return 'bg-red-100 text-red-800';
-    return 'bg-gray-100 text-gray-800';
-  };
+  const { data: roles = [], isLoading: isRolesLoading } = useRole();
 
-  const handleAddPermissions = async (
-    roleId: string,
-    permissionNames: string[]
-  ) => {
-    try {
-      const response = await axiosInstance.post(
-        `/api/roles/${roleId}/permissions/assign`,
-        { permissions: permissionNames }
-      );
-      setRoles(
-        roles.map((role) => (role._id === roleId ? response.data : role))
-      );
-      setIsAddPermissionsDialogOpen(false);
-    } catch (error) {
-      console.error('Error adding permissions:', error);
-    }
-  };
+  const isLoading = isPermissionsLoading || isRolesLoading;
 
-  const handleEditPermissions = async (
-    roleId: string,
-    permissionNames: string[]
-  ) => {
-    try {
-      console.log('permissionNames', permissionNames, roleId);
-      const response = await axiosInstance.post(
-        `/api/roles/${roleId}/permissions/revoke`,
-        { permissions: permissionNames }
-      );
-      setRoles(
-        roles.map((role) => (role._id === roleId ? response.data : role))
-      );
-      setIsEditPermissionsDialogOpen(false);
-    } catch (error) {
-      console.error('Error updating permissions:', error);
-    }
-  };
-
-  const handleRemovePermission = async (
-    roleId: string,
-    permissionId: string
-  ) => {
-    try {
-      await axiosInstance.delete(
-        `/api/roles/${roleId}/permissions/${permissionId}`
-      );
-      fetchData();
-    } catch (error) {
-      console.error('Error removing permission:', error);
-    }
-  };
-
-  const handleEditPermission = async (updatedPermission: Permission) => {
-    try {
-      const response = await axiosInstance.put(
-        `/api/permissions/${updatedPermission._id}`,
-        updatedPermission
-      );
-      setPermissions(
-        permissions.map((p) =>
-          p._id === updatedPermission._id ? response.data : p
-        )
-      );
-      setIsEditDialogOpen(false);
-    } catch (error) {
-      console.error('Error updating permission:', error);
-    }
-  };
-
-  const handleDeletePermission = async (permissionId: string) => {
-    try {
-      await axiosInstance.delete(`/api/permissions/${permissionId}`);
-      fetchData();
-    } catch (error) {
-      console.error('Error deleting permission:', error);
-    }
-  };
-
-  const handleCreateRole = async (newRole: CreateRolePayload) => {
-    try {
-      await axiosInstance.post('/api/roles/create', newRole);
-      fetchData();
+  const createRoleMutation = useMutation({
+    mutationFn: (payload: CreateRolePayload) =>
+      axiosInstance.post('/api/roles/create', payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['roles'] });
       setIsCreateRoleDialogOpen(false);
-    } catch (error) {
-      console.error('Error creating role:', error);
-    }
+    },
+  });
+
+  const deleteRoleMutation = useMutation({
+    mutationFn: (roleId: string) =>
+      axiosInstance.delete(`/api/roles/${roleId}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['roles'] });
+      setIsDeleteDialogOpen(false);
+    },
+  });
+
+  const assignPermissionsMutation = useMutation({
+    mutationFn: ({
+      roleId,
+      permissions,
+    }: {
+      roleId: string;
+      permissions: string[];
+    }) =>
+      axiosInstance.post(`/api/roles/${roleId}/permissions/assign`, {
+        permissions,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['roles'] });
+      setIsAddPermissionsDialogOpen(false);
+    },
+  });
+
+  const revokePermissionsMutation = useMutation({
+    mutationFn: async ({
+      roleId,
+      permissions,
+    }: {
+      roleId: string;
+      permissions: string[];
+    }) => {
+      console.log('roleId', roleId);
+      console.log('permissions', permissions);
+      await axiosInstance.put(`/api/roles/${roleId}/permissions`, {
+        permissionNames: permissions,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['roles'] });
+      setIsEditPermissionsDialogOpen(false);
+    },
+    onError: (error) => {
+      toast.error(error.message);
+    },
+  });
+
+  const handleCreateRole = (payload: CreateRolePayload) => {
+    createRoleMutation.mutate(payload);
+  };
+
+  const handleDeleteRole = (roleId: string) => {
+    deleteRoleMutation.mutate(roleId);
+  };
+
+  const handleAddPermissions = (roleId: string, permissionNames: string[]) => {
+    assignPermissionsMutation.mutate({ roleId, permissions: permissionNames });
+  };
+
+  const handleEditPermissions = (roleId: string, permissionNames: string[]) => {
+    revokePermissionsMutation.mutate({ roleId, permissions: permissionNames });
+  };
+
+  const filteredRoles = roles.filter((role: Role) => {
+    const term = searchTerm.toLowerCase();
+    return (
+      role.name.toLowerCase().includes(term) ||
+      role.permissions.some((p) => p.name.toLowerCase().includes(term))
+    );
+  });
+
+  const getPermissionColor = (name: string) => {
+    if (name.includes(':view')) return 'bg-blue-100 text-blue-800';
+    if (name.includes(':create')) return 'bg-green-100 text-green-800';
+    if (name.includes(':edit')) return 'bg-yellow-100 text-yellow-800';
+    if (name.includes(':delete')) return 'bg-red-100 text-red-800';
+    return 'bg-gray-100 text-gray-800';
   };
 
   if (isLoading) {
@@ -266,7 +222,7 @@ export default function PermissionsManagement() {
           </div>
 
           <div className="grid gap-4">
-            {filteredRoles.map((role) => (
+            {filteredRoles.map((role: Role) => (
               <Card key={role._id}>
                 <CardHeader>
                   <div className="flex items-center justify-between">
@@ -293,17 +249,6 @@ export default function PermissionsManagement() {
                             <Edit className="w-4 h-4" />
                             Edit Permissions
                           </Button>
-                          <Button
-                            onClick={() => {
-                              setSelectedRole(role);
-                              setIsAddPermissionsDialogOpen(true);
-                            }}
-                            variant="outline"
-                            className="flex items-center gap-2"
-                          >
-                            <Plus className="w-4 h-4" />
-                            Add More
-                          </Button>
                         </>
                       ) : (
                         <Button
@@ -318,6 +263,16 @@ export default function PermissionsManagement() {
                           Add Permissions
                         </Button>
                       )}
+                      <Button
+                        onClick={() => {
+                          setSelectedRole(role);
+                          setIsDeleteDialogOpen(true);
+                        }}
+                        variant="destructive"
+                        className="flex items-center gap-2"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
                     </div>
                   </div>
                 </CardHeader>
@@ -338,42 +293,6 @@ export default function PermissionsManagement() {
                           >
                             {permission.name}
                           </Badge>
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-6 w-6 p-0"
-                              >
-                                <Trash2 className="w-3 h-3" />
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>
-                                  Remove Permission
-                                </AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Are you sure you want to remove "
-                                  {permission.name}" from the "{role.name}"
-                                  role?
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction
-                                  onClick={() =>
-                                    handleRemovePermission(
-                                      role._id,
-                                      permission._id
-                                    )
-                                  }
-                                >
-                                  Remove
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
                         </div>
                       ))
                     )}
@@ -403,7 +322,7 @@ export default function PermissionsManagement() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {permissions.map((permission) => (
+                  {permissions.map((permission: Permission) => (
                     <TableRow key={permission._id}>
                       <TableCell>
                         <Badge className={getPermissionColor(permission.name)}>
@@ -428,35 +347,6 @@ export default function PermissionsManagement() {
                           >
                             <Edit className="w-4 h-4" />
                           </Button>
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button variant="outline" size="sm">
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>
-                                  Delete Permission
-                                </AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Are you sure you want to delete "
-                                  {permission.name}"? This will remove it from
-                                  all roles.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction
-                                  onClick={() =>
-                                    handleDeletePermission(permission._id)
-                                  }
-                                >
-                                  Delete
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -491,7 +381,12 @@ export default function PermissionsManagement() {
           setEditingPermission(null);
         }}
         permission={editingPermission}
-        onSave={handleEditPermission}
+        onSave={() => {
+          if (selectedRole && editingPermission) {
+            handleEditPermissions(selectedRole._id, [editingPermission.name]);
+            setIsEditDialogOpen(false);
+          }
+        }}
       />
 
       <CreateRoleDialog
@@ -499,7 +394,83 @@ export default function PermissionsManagement() {
         onClose={() => setIsCreateRoleDialogOpen(false)}
         onCreate={handleCreateRole}
       />
+
+      <DeleteRoleDialog
+        isOpen={isDeleteDialogOpen}
+        onClose={() => setIsDeleteDialogOpen(false)}
+        role={selectedRole}
+        onDelete={handleDeleteRole}
+      />
     </div>
+  );
+}
+
+interface DeleteRoleDialogProps {
+  isOpen: boolean;
+  onClose: () => void;
+  role: Role | null;
+  onDelete: (roleId: string) => void;
+}
+
+function DeleteRoleDialog({
+  isOpen,
+  onClose,
+  role,
+  onDelete,
+}: DeleteRoleDialogProps) {
+  const [confirmationText, setConfirmationText] = useState('');
+
+  useEffect(() => {
+    if (role) {
+      setConfirmationText('');
+    }
+  }, [role]);
+
+  const handleDelete = () => {
+    if (role) {
+      onDelete(role._id);
+      onClose();
+    }
+  };
+
+  if (!role) return null;
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Delete Role</DialogTitle>
+          <DialogDescription>
+            Are you sure you want to delete the role{' '}
+            <strong>{role.name}</strong>? <br />
+            This action cannot be undone.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="confirmation">Type role name to confirm</Label>
+            <Input
+              id="confirmation"
+              value={confirmationText}
+              onChange={(e) => setConfirmationText(e.target.value)}
+              placeholder={`Type "${role.name}" to confirm`}
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={handleDelete}
+            disabled={confirmationText !== role.name}
+          >
+            Delete Role
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
