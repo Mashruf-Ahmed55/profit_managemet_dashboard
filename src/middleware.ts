@@ -9,7 +9,7 @@ export function middleware(request: NextRequest) {
 
   // ✅ Block access to login/register if already logged in
   if (pathname === '/' && token) {
-    return NextResponse.redirect(new URL('/dashboard', request.url)); // or home
+    return NextResponse.redirect(new URL('/dashboard', request.url));
   }
 
   // ✅ Block private routes if not logged in
